@@ -18,3 +18,7 @@ npm run dev
 - `npm run smoke`: comprueba el build en una ventana Electron oculta y cierra automáticamente.
 
 La compilación todavía no genera un instalador. La interfaz no tiene acceso directo a Node; se reservó un preload aislado para futuros contratos IPC. No se instaló Fastify, QVAC, persistencia ni sincronización P2P.
+
+## Integración con inferencia simulada
+
+Infraestructura puede usar `MockInferenceEngine` para trabajar con transcripción, extracción y preguntas sin modelos reales. Ver [contrato, ejemplos y escenarios](docs/mock-inference.md). Ejecutar `npm run test` para comprobar su comportamiento.
