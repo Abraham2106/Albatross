@@ -1,0 +1,236 @@
+{
+  "GET /api/clientes": [
+    {
+      "id": "metro",
+      "nombre": "Hospital DemoCare Metro North",
+      "ciudad": "Quito",
+      "pais": "Ecuador",
+      "confianza": 30,
+      "ultimaVisita": "2026-08-05",
+      "pendientes": 3
+    },
+    {
+      "id": "horizon",
+      "nombre": "Hospital DemoCare Horizon",
+      "ciudad": "São Paulo",
+      "pais": "Brasil",
+      "confianza": 40,
+      "ultimaVisita": "2026-08-16",
+      "pendientes": 3
+    },
+    {
+      "id": "central",
+      "nombre": "Clinica DemoCare Central",
+      "ciudad": "Bogotá",
+      "pais": "Colombia",
+      "confianza": 40,
+      "ultimaVisita": "2026-08-10",
+      "pendientes": 3
+    }
+  ],
+  "GET /api/clientes/:id": {
+    "id": "metro",
+    "nombre": "Hospital DemoCare Metro North",
+    "ciudad": "Quito",
+    "pais": "Ecuador",
+    "confianza": 30,
+    "ultimaVisita": "2026-08-05",
+    "pendientes": [
+      {
+        "id": "metro-p1",
+        "texto": "Verificar edad de MR",
+        "valor": 11,
+        "motivo": "El dato es una estimacion"
+      },
+      {
+        "id": "metro-p2",
+        "texto": "Confirmar si hay equipos de CT",
+        "valor": 14,
+        "motivo": "Modalidad nunca reportada"
+      },
+      {
+        "id": "metro-p3",
+        "texto": "Confirmar si hay equipos de Ultrasound",
+        "valor": 14,
+        "motivo": "Modalidad nunca reportada"
+      }
+    ],
+    "equipos": [
+      {
+        "id": "metro-1",
+        "modalidad": "MR",
+        "cantidad": 2,
+        "marca": "Aurelia Health",
+        "modelo": null,
+        "edad": 8,
+        "anioInstalacion": 2018,
+        "estado": "Estimated",
+        "confianza": "Medium",
+        "nota": "Model unknown.",
+        "observador": "Field User 13",
+        "fecha": "2026-08-05",
+        "cita": null
+      },
+      {
+        "id": "metro-ct",
+        "modalidad": "CT",
+        "cantidad": null,
+        "marca": null,
+        "modelo": null,
+        "edad": null,
+        "anioInstalacion": null,
+        "estado": "Unknown",
+        "confianza": null,
+        "nota": null,
+        "observador": null,
+        "fecha": null,
+        "cita": null
+      },
+      {
+        "id": "metro-ultrasound",
+        "modalidad": "Ultrasound",
+        "cantidad": null,
+        "marca": null,
+        "modelo": null,
+        "edad": null,
+        "anioInstalacion": null,
+        "estado": "Unknown",
+        "confianza": null,
+        "nota": null,
+        "observador": null,
+        "fecha": null,
+        "cita": null
+      }
+    ]
+  },
+  "GET /api/geo": {
+    "region": "Latinoamérica",
+    "confianza": 61,
+    "paises": [
+      {
+        "id": "arg",
+        "nombre": "Argentina",
+        "confianza": 67,
+        "clientes": 1,
+        "equipos": 2,
+        "ciudades": [
+          {
+            "id": "buenos-aires",
+            "nombre": "Buenos Aires",
+            "confianza": 67,
+            "clientes": 1,
+            "equipos": 2,
+            "hospitales": [
+              {
+                "id": "park",
+                "nombre": "Hospital DemoCare Park",
+                "confianza": 67,
+                "equipos": 2,
+                "x": 0.41,
+                "y": 0.33
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "bra",
+        "nombre": "Brasil",
+        "confianza": 58,
+        "clientes": 2,
+        "equipos": 4,
+        "ciudades": [
+          {
+            "id": "campinas",
+            "nombre": "Campinas",
+            "confianza": 76,
+            "clientes": 1,
+            "equipos": 2,
+            "hospitales": [
+              {
+                "id": "light",
+                "nombre": "Clinica DemoCare Light",
+                "confianza": 76,
+                "equipos": 2,
+                "x": 0.58,
+                "y": 0.29
+              }
+            ]
+          },
+          {
+            "id": "sao-paulo",
+            "nombre": "São Paulo",
+            "confianza": 40,
+            "clientes": 1,
+            "equipos": 2,
+            "hospitales": [
+              {
+                "id": "horizon",
+                "nombre": "Hospital DemoCare Horizon",
+                "confianza": 40,
+                "equipos": 2,
+                "x": 0.52,
+                "y": 0.43
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "POST /api/observaciones": {
+    "_request": {
+      "texto": "I am at Hospital DemoCare Pacific in Panama. They have two MR systems and one CT."
+    },
+    "observacionId": "obs-123",
+    "clienteId": "pacific",
+    "cliente": "Hospital DemoCare Pacific",
+    "textoOriginal": "I am at Hospital DemoCare Pacific in Panama...",
+    "items": [
+      {
+        "id": "i1",
+        "resumen": "2 equipos MR, NovaMed NM-MR 700, aprox. 7 años",
+        "estadoSugerido": "Reported",
+        "campos": {
+          "modalidad": "MR",
+          "cantidad": 2,
+          "marca": "NovaMed",
+          "modelo": "NM-MR 700",
+          "edad": 7
+        }
+      }
+    ],
+    "conflictos": [
+      {
+        "campo": "MR",
+        "mensaje": "Sales User 02 reportó 3 equipos MR hace 2 meses. ¿Cuál es el correcto?"
+      }
+    ]
+  },
+  "POST /api/observaciones/:id/confirmar": {
+    "_request": {
+      "respuestas": {
+        "i1": "si",
+        "i2": "nose"
+      }
+    },
+    "ok": true,
+    "guardados": 2
+  },
+  "GET /api/resumen": {
+    "region": "Latinoamérica",
+    "pais": "Todos",
+    "clientes": 13,
+    "equipos": 20,
+    "confianzaMedia": 60,
+    "sinVerificar": 0,
+    "oportunidades": [
+      {
+        "id": "o1",
+        "cliente": "Clinica DemoCare Andes",
+        "motivo": "CT de 13 años en Santiago",
+        "prioridad": "alta"
+      }
+    ]
+  }
+}
