@@ -19,6 +19,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@qvac/sdk": "0.19.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
