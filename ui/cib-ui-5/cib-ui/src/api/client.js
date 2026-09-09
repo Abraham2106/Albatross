@@ -59,6 +59,19 @@ export const extraer = (texto, audio) => {
   return pedir('/observaciones', { method: 'POST', body: JSON.stringify({ texto }) });
 };
 
+export const estadoModelos = () => {
+  const api = desktop();
+  return api?.models ? viaDesktop(() => api.models()) : Promise.resolve(null);
+};
+
+export const descargarModelos = () => {
+  const api = desktop();
+  if (!api?.downloadModels) throw new Error('SIN_BACKEND');
+  return viaDesktop(() => api.downloadModels(crypto.randomUUID()));
+};
+
+export const onProgreso = (listener) => desktop()?.onProgress?.(listener) ?? (() => {});
+
 export const confirmar = (observacionId, respuestas) => {
   const api = desktop();
   if (api?.confirmar) {

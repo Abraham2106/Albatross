@@ -3,6 +3,11 @@ import type { CibService } from './cib-service';
 import type { InferenceErrorCode, TranscriptionRequest } from './ports/inference-engine';
 export type Result<T> = { ok: true; data: T } | { ok: false; error: { code: InferenceErrorCode; message: string } };
 export interface RuntimeStatus { mode: 'qvac'; modelsEnabled: boolean; message: string }
+export interface ModelPackStatus {
+  ready: boolean;
+  totalBytes: number;
+  items: readonly { name: string; label: string; file: string; ready: boolean; bytes: number; expected: number }[];
+}
 export interface DesktopApi {
   status(): Promise<Result<RuntimeStatus>>;
   list(): Promise<Result<ReturnType<VisitService['list']>>>;
@@ -18,5 +23,7 @@ export interface DesktopApi {
   resumen(pais?: string): Promise<Result<ReturnType<CibService['resumen']>>>;
   extraer(requestId: string, input: { texto?: string; audio?: TranscriptionRequest }): Promise<Result<Awaited<ReturnType<CibService['extraer']>>>>;
   confirmar(input: { observacionId: string; respuestas: Record<string, 'si' | 'no' | 'nose'> }): Promise<Result<ReturnType<CibService['confirmar']>>>;
+  models(): Promise<Result<ModelPackStatus>>;
+  downloadModels(requestId: string): Promise<Result<ModelPackStatus>>;
 }
 declare global { interface Window { philips?: DesktopApi } }

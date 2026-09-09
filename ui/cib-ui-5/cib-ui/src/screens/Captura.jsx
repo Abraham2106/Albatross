@@ -1,7 +1,12 @@
-import { useRef, useState } from 'react';
-import { extraer, confirmar } from '../api/client.js';
+import { useEffect, useRef, useState } from 'react';
+import { extraer, confirmar, descargarModelos, estadoModelos, onProgreso } from '../api/client.js';
 import { Micro, SinRed, Copia } from '../components/Iconos.jsx';
 import { startRecording } from '../../../../../src/ui/recorder.ts';
+
+function percentFrom(message) {
+  const match = String(message ?? '').match(/(\d+)\s*%/);
+  return match ? Number(match[1]) : null;
+}
 
 export default function Captura({ onListo }) {
   const [texto, setTexto] = useState('');
@@ -13,7 +18,38 @@ export default function Captura({ onListo }) {
   const [respuestas, setRespuestas] = useState({});
   const [error, setError] = useState('');
   const [guardado, setGuardado] = useState(false);
+  const [pack, setPack] = useState(undefined);
+  const [bajando, setBajando] = useState(false);
+  const [progreso, setProgreso] = useState('');
+  const [pct, setPct] = useState(0);
   const recorder = useRef(null);
+
+  useEffect(() => {
+    let alive = true;
+    estadoModelos().then(value => { if (alive) setPack(value); });
+    const off = onProgreso(({ message }) => {
+      setProgreso(message);
+      const next = percentFrom(message);
+      if (next !== null) setPct(next);
+    });
+    return () => { alive = false; off(); };
+  }, []);
+
+  async function bajarModelos() {
+    setError('');
+    setBajando(true);
+    setProgreso('Preparando descarga…');
+    setPct(0);
+    try {
+      setPack(await descargarModelos());
+      setProgreso('Modelos listos');
+      setPct(100);
+    } catch (e) {
+      setError(e.message === 'SIN_BACKEND' ? 'La descarga de modelos solo está en Electron.' : 'No se pudieron descargar los modelos. ' + e.message);
+    } finally {
+      setBajando(false);
+    }
+  }
 
   async function procesar() {
     if (!texto.trim() && !audio) {
@@ -81,6 +117,24 @@ export default function Captura({ onListo }) {
       <div className="cuerpo" style={{ padding: '16px 18px' }}>
         {!resultado && (
           <>
+            {pack && (
+              <div className="pack-modelos">
+                {pack.ready ? (
+                  <p className="fila-s">Modelos listos en el dispositivo.</p>
+                ) : (
+                  <>
+                    <button data-testid="cib-modelos" className="btn btn-sec" onClick={bajarModelos} disabled={bajando}>
+                      {bajando ? (progreso || 'Descargando modelos…') : 'Descargar modelos (~4,1 GB)'}
+                    </button>
+                    {bajando && (
+                      <div className="barra-modelos" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+                        <span style={{ width: pct + '%' }} />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
             <button
               className="btn-mic"
               data-testid="cib-mic"
@@ -101,8 +155,8 @@ export default function Captura({ onListo }) {
             {audio && <p className="fila-s">Audio capturado. Procesalo o grabá de nuevo.</p>}
             {error && <p className="error">{error}</p>}
 
-            <button data-testid="cib-procesar" className="btn" onClick={procesar} disabled={cargando} style={{ marginTop: 12 }}>
-              {cargando ? 'Procesando en el dispositivo' : 'Procesar'}
+            <button data-testid="cib-procesar" className="btn" onClick={procesar} disabled={cargando || bajando || (pack && !pack.ready)} style={{ marginTop: 12 }}>
+              {cargando ? 'Procesando en el dispositivo' : pack && !pack.ready ? 'Descargá los modelos para procesar' : 'Procesar'}
             </button>
           </>
         )}

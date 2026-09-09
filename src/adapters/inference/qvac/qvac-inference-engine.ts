@@ -22,6 +22,7 @@ export class QvacInferenceEngine implements InferenceEngine {
   private controller?: AbortController;
   private running?: Promise<unknown>;
   constructor(private readonly options: QvacOptions = {}) {}
+  enable() { this.options.enabled = true; }
   private async tracked<T>(client: QvacClient, run: RequestRun<T>, signal: AbortSignal, timeoutMs: number): Promise<T> {
     let interruption: InferenceError | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -86,7 +87,7 @@ export class QvacInferenceEngine implements InferenceEngine {
         checkCancelled(controller.signal);
         const data = await work(client, id, controller.signal);
         checkCancelled(controller.signal);
-        return { data, provenance: { execution: 'local' as const, model: capability === 'stt' ? this.options.sttSource ?? 'WHISPER_LARGE_V3_TURBO_Q8_0' : this.options.llmSource ?? 'QWEN3_4B_INST_Q4_K_M' } };
+        return { data, provenance: { execution: 'local' as const, model: capability === 'stt' ? this.options.sttSource ?? 'WHISPER_LARGE_V3_TURBO' : this.options.llmSource ?? 'QWEN3_4B_INST_Q4_K_M' } };
       } catch (error) {
         if (error instanceof InferenceError) throw error;
         throw new InferenceError('UNAVAILABLE', 'QVAC no pudo completar la operación. Comprueba modelos, memoria y runtime.');

@@ -56,6 +56,8 @@ function setupHandlers() {
     audio: v.audio && typeof v.audio === 'object' ? v.audio as { audio: Uint8Array; mimeType: string } : undefined,
   }, { signal })));
   handle('confirmar', value => runtime!.cib.confirmar(value));
+  handle('models', () => runtime!.models());
+  handle('download-models', value => operation(value, (_input, signal) => runtime!.downloadModels(signal)));
 }
 async function createWindow() {
   const window = new BrowserWindow({
@@ -121,7 +123,8 @@ app.on('before-quit', event => {
 app.whenReady().then(async () => {
   runtime = createRuntime(smokeTest ? ':memory:' : path.join(app.getPath('userData'), 'philips-visits.sqlite'),
     smokeTest ? {} : process.env,
-    message => { if (active) mainWindow?.webContents.send('philips:progress', { requestId: active.id, message }); });
+    message => { if (active) mainWindow?.webContents.send('philips:progress', { requestId: active.id, message }); },
+    !smokeTest);
   setupHandlers(); await createWindow();
 }).catch(error => { console.error(error); app.exit(1); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin' || smokeTest) app.quit(); });

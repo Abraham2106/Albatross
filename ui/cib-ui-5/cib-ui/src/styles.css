@@ -272,6 +272,29 @@ textarea:focus { border-color: var(--acento); outline: none; }
   font-weight: 500;
 }
 .btn:disabled { background: var(--linea-fuerte); }
+.btn-sec {
+  background: var(--papel);
+  color: var(--acento);
+  border: 1px solid var(--acento);
+}
+.btn-sec:disabled {
+  background: var(--panel);
+  color: var(--tinta-3);
+  border-color: var(--linea);
+}
+.pack-modelos { margin-bottom: 12px; }
+.barra-modelos {
+  height: 6px;
+  margin-top: 8px;
+  background: var(--linea);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.barra-modelos > span {
+  display: block;
+  height: 100%;
+  background: var(--acento);
+}
 
 .btn-mic {
   width: 100%;

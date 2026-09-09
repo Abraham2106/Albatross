@@ -23,5 +23,8 @@
     "vite.config.ts",
     "tests/**/*.ts",
     "vitest.config.ts"
+  ],
+  "exclude": [
+    "src/adapters/inference/qvac/model-pack-cli.ts"
   ]
 }

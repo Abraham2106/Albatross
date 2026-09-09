@@ -14,6 +14,8 @@ const api: DesktopApi = {
   resumen: pais => ipcRenderer.invoke('philips:resumen', pais),
   extraer: (requestId, input) => ipcRenderer.invoke('philips:extraer', { requestId, ...input }),
   confirmar: input => ipcRenderer.invoke('philips:confirmar', input),
+  models: () => ipcRenderer.invoke('philips:models'),
+  downloadModels: requestId => ipcRenderer.invoke('philips:download-models', { requestId }),
   onProgress: listener => {
     const handler = (_event: Electron.IpcRendererEvent, value: { requestId: string; message: string }) => listener(value);
     ipcRenderer.on('philips:progress', handler);

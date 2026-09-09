@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { LLM_FILE, STT_FILE } from './model-pack';
 
 type CompletionParams = Parameters<typeof import('@qvac/sdk')['completion']>[0];
 export interface RequestRun<T> { requestId: string; final: Promise<T> }
@@ -23,13 +24,17 @@ export async function createSdkClient(onProgress: (message: string) => void): Pr
       const onDownload = (p: { percentage?: number }) => onProgress('Preparando modelo ' + capability + (p.percentage === undefined ? '' : ': ' + Math.round(p.percentage) + '%'));
       const pending = capability === 'stt'
         ? sdk.loadModel({
-          modelSrc: source ?? localWeight('ggml-large-v3-turbo-q8_0.bin') ?? sdk.WHISPER_LARGE_V3_TURBO,
-          ...(source || localWeight('ggml-large-v3-turbo-q8_0.bin') ? { modelType: 'whispercpp-transcription' as const } : {}),
-          modelConfig: { audio_format: 's16le', language: 'auto' }, onProgress: onDownload,
+          modelSrc: source ?? localWeight(STT_FILE) ?? sdk.WHISPER_LARGE_V3_TURBO,
+          ...(source || localWeight(STT_FILE) ? { modelType: 'whispercpp-transcription' as const } : {}),
+          modelConfig: {
+            audio_format: 's16le', language: 'auto', strategy: 'greedy',
+            no_timestamps: true,
+            contextParams: { use_gpu: true, flash_attn: true },
+          }, onProgress: onDownload,
         })
         : sdk.loadModel({
-          modelSrc: source ?? localWeight('Qwen3-4B-Q4_K_M.gguf') ?? sdk.QWEN3_4B_INST_Q4_K_M,
-          ...(source || localWeight('Qwen3-4B-Q4_K_M.gguf') ? { modelType: 'llamacpp-completion' as const } : {}),
+          modelSrc: source ?? localWeight(LLM_FILE) ?? sdk.QWEN3_4B_INST_Q4_K_M,
+          ...(source || localWeight(LLM_FILE) ? { modelType: 'llamacpp-completion' as const } : {}),
           modelConfig: { ctx_size: 4096 }, onProgress: onDownload,
         });
       return { requestId: pending.requestId, final: pending };
