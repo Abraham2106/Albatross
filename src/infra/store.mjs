@@ -1,14 +1,6 @@
 /**
- * Persistencia local de observaciones.
- *
- * Frontera: este modulo guarda y lee. No calcula nada. Confidence, Status y
- * Estimated Installation Year llegan ya resueltos desde src/domain/; si faltan
- * se guardan como null, nunca se derivan aqui.
- *
- * Las columnas se llaman literalmente como en la hoja "Dummy Installed Base"
- * del libro Dummy_Installed_Base_Hackathon.xlsx, con espacios, barras y
- * parentesis. Renombrarlas obligaria a mantener un mapa de traduccion en cada
- * consumidor; se prefiere citar la fuente.
+ * Persistencia local. Guarda y lee; no deriva ningun campo.
+ * Columnas nombradas literalmente como la hoja "Dummy Installed Base".
  */
 
 import { DatabaseSync } from 'node:sqlite';
@@ -115,11 +107,7 @@ export function openStore(filename = ':memory:') {
   );
 
   return {
-    /**
-     * Guarda una observacion tal cual llega. Rechaza columnas que no existen en
-     * la hoja para que un campo mal escrito falle aqui y no se pierda en silencio.
-     * Devuelve el Observation ID asignado por SQLite.
-     */
+    /** Rechaza columnas que no estan en la hoja. Devuelve el Observation ID. */
     insertObservation(row) {
       if (row === null || typeof row !== 'object') {
         throw new TypeError('insertObservation espera un objeto.');
@@ -141,7 +129,7 @@ export function openStore(filename = ':memory:') {
       return customersStmt.all();
     },
 
-    /** Asocia un embedding a un cliente. Sin el, findSimilarCustomers no ve nada. */
+    /** Sin esto, findSimilarCustomers no ve nada. */
     upsertCustomerEmbedding(customer, embedding) {
       if (typeof customer !== 'string' || customer.trim() === '') {
         throw new TypeError('customer debe ser texto no vacio.');
@@ -151,15 +139,8 @@ export function openStore(filename = ':memory:') {
     },
 
     /**
-     * Los k clientes mas cercanos por coseno, de mayor a menor similitud.
-     * Devuelve vecinos y su distancia; no aplica umbral, no decide si son el
-     * mismo cliente ni si deben fusionarse. Esa decision es del dominio.
-     * Los embeddings de otra dimension o de norma cero se omiten: no son
-     * comparables, y devolverlos como similitud 0 los haria parecer vecinos malos
-     * en vez de incomparables.
-     *
-     * ponytail: escaneo lineal de toda la tabla. Con decenas de miles de
-     * clientes conviene un indice vectorial (sqlite-vec) o precalcular normas.
+     * Los k vecinos mas cercanos por coseno. No aplica umbral ni decide nada.
+     * ponytail: escaneo lineal; indice vectorial (sqlite-vec) si crece.
      */
     findSimilarCustomers(embedding, k = 5) {
       const query = toFloat32(embedding, 'embedding');

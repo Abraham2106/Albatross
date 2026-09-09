@@ -2,10 +2,6 @@
  * Mide el adaptador activo contra fixtures/voice-tests.json y escribe REPORT.md.
  *
  *   ALBATROSS_ADAPTER=mock node scripts/measure.mjs
- *
- * No levanta Electron, ni Vite, ni la UI. Importa el adaptador y src/domain/
- * directo. No inventa metricas: lo que el adaptador no produce se reporta como
- * no producido, no como cero.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -17,9 +13,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT = new URL('../', import.meta.url);
 const rel = (p) => new URL(p, ROOT);
 
-// Los .ts del repo se compilan con tsc, no con el stripper de Node, asi que
-// usan parameter properties e imports sin extension. Un solo re-exec con
-// --experimental-transform-types evita duplicar el adaptador en .mjs.
+// Los .ts del repo usan parameter properties e imports sin extension: el
+// stripper de Node no basta, hace falta --experimental-transform-types.
 if (!process.execArgv.includes('--experimental-transform-types')) {
   const args = [
     '--experimental-transform-types',
@@ -65,9 +60,6 @@ async function loadEngine(name) {
 }
 
 /**
- * El dominio vive en src/domain/ y NO expone un deriveFields(row): expone
- * funciones puras separadas. Nos adaptamos a ellas.
- *
  *   deriveConfidence(rawAnswerText)       -> "High" | "Medium" | "Low"
  *   deriveStatus(channel, rawAnswerText)  -> "Confirmed" | "Reported" | "Estimated" | "Unknown"
  */
@@ -89,11 +81,7 @@ const normModality = (m) => {
 };
 const normText = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : v ?? null);
 
-/**
- * Lleva la salida del adaptador a la forma comparable del fixture: la lista de
- * candidatos del contrato InferenceEngine, un candidato por campo, agrupados
- * por modalidad.
- */
+/** Candidatos del contrato InferenceEngine -> filas comparables del fixture. */
 function toRows(data) {
   const candidates = data?.candidates ?? [];
   if (candidates.length > 0 && candidates[0].field === undefined) return candidates;
@@ -117,15 +105,10 @@ const FIELDS = ['cliente', 'pais', 'ciudad', 'modalidad', 'cantidad', 'marca', '
 
 const pick = (row, field) => row?.[field] ?? null;
 
-/**
- * Compara un campo. Devuelve 'ok', 'miss' o 'relleno'.
- * 'relleno' es el caso peligroso: el enunciado no dice nada y el adaptador
- * puso un valor. Se cuenta aparte porque inventar es peor que callar.
- */
+/** 'ok' | 'miss' | 'relleno'. Relleno = el enunciado no lo dice y lo puso igual. */
 function compare(field, expected, row) {
-  // Sin fila emitida no hay acierto posible. Si "esperado null / obtenido null"
-  // contara como ok, un adaptador que no responde nada puntuaria alto en los
-  // campos que el enunciado no menciona.
+  // Sin fila no hay acierto: si null/null contara como ok, un adaptador mudo
+  // puntuaria alto en los campos que el enunciado no menciona.
   if (row === null) return 'miss';
   const got = pick(row, field);
   if (field === 'edad' && expected.edad === null && expected.edad_cualitativa !== null) {
@@ -287,11 +270,7 @@ ${dist(confidenceDist, 'Confidence')}
   if (conError > 0) console.log(`${conError} de ${total} casos fallaron en el adaptador; el detalle esta en REPORT.md.`);
 }
 
-/**
- * Autocomprobacion de la logica de medicion: node scripts/measure.mjs --self-check
- * No toca el adaptador. Verifica que un extractor perfecto puntue 100, que uno
- * que calla puntue 0 y que el relleno de marca se detecte.
- */
+/** Autocomprobacion de la medicion: node scripts/measure.mjs --self-check */
 function selfCheck() {
   const assert = (cond, msg) => {
     if (!cond) throw new Error(`FALLO: ${msg}`);
