@@ -1,7 +1,9 @@
 node_modules/
 dist/
 dist-electron/
+models/
 *.log
 .env
 .env.*
 !.env.example
+qvac-integration-plan.md

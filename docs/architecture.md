@@ -53,7 +53,7 @@ La UI se comunica en ejecución con la API local; importar tipos no implica ejec
 | fixtures/ | Datos sintéticos identificados para desarrollo y pruebas. |
 | docs/decisions/ | Registro de futuras decisiones y alternativas consideradas. |
 
-El contrato inicial InferenceEngine y su adapter mock están disponibles para integración; ver [guía del mock](mock-inference.md). Los demás puertos y casos de uso de las secciones siguientes siguen como propuesta. En el reparto del equipo, App significa UI; la carpeta application/ describe la coordinación de casos de uso que integra Infra, apoyándose en Dominio y QVAC.
+El contrato InferenceEngine lo implementa `QvacInferenceEngine`. Los demás puertos y casos de uso de las secciones siguientes siguen como propuesta. En el reparto del equipo, App significa UI; la carpeta application/ describe la coordinación de casos de uso que integra Infra, apoyándose en Dominio y QVAC.
 
 ## Casos de uso y puertos
 

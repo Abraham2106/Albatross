@@ -39,6 +39,10 @@ export type Requirement = "Required" | "Preferred" | "Optional" | "Derived";
  */
 export interface Candidate {
   readonly siteId: string;
+  readonly scope?: "total" | "group";
+  readonly groupLabel?: string;
+  /** Prevent qualitative age from being guessed by legacy text parsing. */
+  readonly extractedAge?: boolean;
   readonly modality: string;
   readonly quantity?: number;
   readonly brand?: string;
@@ -82,7 +86,8 @@ export interface ObservationRef {
  */
 export interface EquipmentGroup {
   readonly groupId: string;
-  readonly quantity: number;
+  readonly quantity?: number;
+  readonly groupLabel?: string;
   /** "Unknown" si no se sabe. Nunca se adivina (Agent Question Logic, paso 5). */
   readonly brand: string;
   readonly model: string;

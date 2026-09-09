@@ -1,7 +1,7 @@
 /**
  * Mide el adaptador activo contra fixtures/voice-tests.json y escribe REPORT.md.
  *
- *   ALBATROSS_ADAPTER=mock node scripts/measure.mjs
+ *   ALBATROSS_ADAPTER=qvac node scripts/measure.mjs
  */
 
 import { spawnSync } from 'node:child_process';
@@ -35,28 +35,18 @@ registerHooks({
   },
 });
 
-const ADAPTER = process.env.ALBATROSS_ADAPTER ?? 'mock';
+const ADAPTER = process.env.ALBATROSS_ADAPTER ?? 'qvac';
 
 /** Construye el motor de inferencia del adaptador seleccionado. */
 async function loadEngine(name) {
-  if (name === 'mock') {
-    const { MockInferenceEngine } = await import(
-      rel('src/adapters/inference/mock/index.ts').href
-    );
-    return new MockInferenceEngine({ scenario: 'post-visit' });
-  }
   if (name === 'qvac') {
-    const candidates = ['src/qvac/index.mjs', 'src/adapters/inference/qvac/index.ts'];
-    for (const c of candidates) {
-      if (existsSync(fileURLToPath(rel(c)))) {
-        const mod = await import(rel(c).href);
-        const Engine = mod.QvacInferenceEngine ?? mod.default;
-        if (typeof Engine === 'function') return new Engine();
-      }
+    if (process.env.QVAC_ENABLE_MODELS === '1') {
+      throw new Error('measure.mjs no carga modelos reales. Quita QVAC_ENABLE_MODELS y usa --self-check.');
     }
-    throw new Error('ALBATROSS_ADAPTER=qvac pero src/qvac/ todavia no expone un motor.');
+    const { QvacInferenceEngine } = await import(rel('src/adapters/inference/qvac/index.ts').href);
+    return new QvacInferenceEngine({ enabled: false });
   }
-  throw new Error(`ALBATROSS_ADAPTER desconocido: ${name}. Valores: mock, qvac.`);
+  throw new Error(`ALBATROSS_ADAPTER desconocido: ${name}. Valor: qvac.`);
 }
 
 /**
@@ -84,7 +74,20 @@ const normText = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : v ?? n
 /** Candidatos del contrato InferenceEngine -> filas comparables del fixture. */
 function toRows(data) {
   const candidates = data?.candidates ?? [];
-  if (candidates.length > 0 && candidates[0].field === undefined) return candidates;
+  const mentioned = data?.mentionedHospital ?? {};
+  if (candidates.length > 0 && candidates[0].field === undefined) {
+    return candidates.map((c) => ({
+      cliente: mentioned.name ?? null,
+      pais: mentioned.country ?? null,
+      ciudad: mentioned.city ?? null,
+      modalidad: c.modality ?? null,
+      cantidad: c.quantity ?? null,
+      marca: c.brand ?? null,
+      modelo: c.model ?? null,
+      edad: c.ageYears ?? null,
+      edad_cualitativa: c.ageDescription ?? null,
+    }));
+  }
   const byModality = new Map();
   for (const c of candidates) {
     const key = normModality(c.modality);
@@ -331,16 +334,28 @@ function selfCheck() {
   assert(compare('edad', c5, { edad: null }) === 'ok', 'no inventar edad ante "mostly new" acierta');
   assert(compare('edad', c5, { edad: 2 }) === 'relleno', 'inventar 2 anos ante "mostly new" es relleno');
 
-  // toRows dobla los candidatos del contrato InferenceEngine en filas.
-  const filas = toRows({
+  // Contrato viejo field/value: se funde por modalidad. El DTO actual no.
+  const legacy = toRows({
     candidates: [
       { modality: 'CT', field: 'count', value: 2 },
       { modality: 'MR', field: 'count', value: 4 },
       { modality: 'CT', field: 'ageYears', value: 11 },
     ],
   });
-  assert(filas.length === 2, 'dos modalidades producen dos filas');
-  assert(filas[0].cantidad === 2 && filas[0].edad === 11, 'los candidatos de una modalidad se funden');
+  assert(legacy.length === 2, 'dos modalidades producen dos filas');
+  assert(legacy[0].cantidad === 2 && legacy[0].edad === 11, 'los candidatos de una modalidad se funden');
+
+  const grouped = toRows({
+    mentionedHospital: { name: 'Hospital DemoCare Horizon', country: null, city: null },
+    candidates: [
+      { modality: 'MR', quantity: 2, brand: null, model: null, ageYears: null, ageDescription: 'old' },
+      { modality: 'MR', quantity: 1, brand: null, model: null, ageYears: null, ageDescription: 'newer' },
+    ],
+  });
+  assert(grouped.length === 2, 'dos grupos MR no se funden');
+  assert(grouped[0].cliente === 'Hospital DemoCare Horizon', 'el hospital mencionado viaja a cada fila');
+  assert(grouped[0].cantidad === 2 && grouped[1].cantidad === 1, 'cantidades de grupo se conservan');
+  assert(grouped[0].edad === null && grouped[0].edad_cualitativa === 'old', 'edad cualitativa no se convierte en numero');
 
   console.log('measure.mjs OK');
 }

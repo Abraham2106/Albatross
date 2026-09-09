@@ -1,63 +1,50 @@
-/** Product contract. No SDK, storage, Electron or platform-specific types. */
-export type InferenceErrorCode = 'INVALID_INPUT' | 'UNAVAILABLE' | 'TIMEOUT' | 'UNSUPPORTED_INPUT';
+import type { Modality } from '../../domain/types';
 
+export type InferenceErrorCode = 'INVALID_INPUT' | 'UNAVAILABLE' | 'TIMEOUT' | 'UNSUPPORTED_INPUT' | 'INVALID_OUTPUT' | 'CANCELLED' | 'CONFLICT';
 export class InferenceError extends Error {
-  constructor(public readonly code: InferenceErrorCode, message: string) {
-    super(message);
-    this.name = 'InferenceError';
-  }
+  constructor(public readonly code: InferenceErrorCode, message: string) { super(message); this.name = 'InferenceError'; }
 }
-
-/** Mock execution is never represented as real local QVAC inference. */
 export type InferenceProvenance =
-  | { readonly execution: 'mock'; readonly scenario: string }
   | { readonly execution: 'local'; readonly model: string }
   | { readonly execution: 'peer'; readonly model: string; readonly peerId: string };
+export interface InferenceResult<T> { readonly data: T; readonly provenance: InferenceProvenance }
+export interface OperationOptions { readonly signal?: AbortSignal }
+export interface TranscriptionRequest { readonly audio: Uint8Array; readonly mimeType: string }
+export interface ExtractionRequest { readonly hospitalId: string; readonly transcript: string }
 
-export interface InferenceResult<T> {
-  readonly data: T;
-  readonly provenance: InferenceProvenance;
-}
-
-export interface TranscriptionRequest {
-  readonly audio: Uint8Array;
-  readonly mimeType: string;
-}
-
-export interface ExtractionRequest {
-  readonly hospitalId: string;
-  readonly transcript: string;
-}
-
-/** Candidates are not persisted observations and never imply confirmation. */
+/** One claim about a total or a distinct equipment group. null means unmentioned. */
 export interface ObservationCandidate {
-  readonly modality: 'CT' | 'MR';
-  readonly field: 'count' | 'ageYears';
-  readonly value: number;
+  readonly modality: Modality;
+  readonly scope: 'total' | 'group';
+  readonly quantity: number | null;
+  readonly brand: string | null;
+  readonly model: string | null;
+  readonly ageYears: number | null;
+  readonly ageDescription: string | null;
+  readonly quantityApproximate: boolean;
+  readonly ageApproximate: boolean;
+  readonly unknownFields: readonly ('quantity' | 'brand' | 'model' | 'ageYears')[];
   readonly evidence: string;
 }
-
+export interface MentionedHospital {
+  readonly name: string | null;
+  readonly country: string | null;
+  readonly city: string | null;
+  readonly evidence: string | null;
+}
 export interface ExtractionData {
   readonly hospitalId: string;
+  readonly mentionedHospital: MentionedHospital;
   readonly candidates: readonly ObservationCandidate[];
 }
-
-/** The domain supplies and prioritizes gaps; inference only phrases them. */
 export interface FollowUpRequest {
   readonly hospitalId: string;
-  readonly gaps: readonly {
-    readonly id: string;
-    readonly description: string;
-  }[];
+  readonly gaps: readonly { readonly id: string; readonly description: string }[];
 }
-
-export interface FollowUpQuestion {
-  readonly gapId: string;
-  readonly text: string;
-}
-
+export interface FollowUpQuestion { readonly gapId: string; readonly text: string }
 export interface InferenceEngine {
-  transcribe(input: TranscriptionRequest): Promise<InferenceResult<{ readonly text: string }>>;
-  extractObservations(input: ExtractionRequest): Promise<InferenceResult<ExtractionData>>;
-  generateFollowUps(input: FollowUpRequest): Promise<InferenceResult<readonly FollowUpQuestion[]>>;
+  transcribe(input: TranscriptionRequest, options?: OperationOptions): Promise<InferenceResult<{ readonly text: string }>>;
+  extractObservations(input: ExtractionRequest, options?: OperationOptions): Promise<InferenceResult<ExtractionData>>;
+  generateFollowUps(input: FollowUpRequest, options?: OperationOptions): Promise<InferenceResult<readonly FollowUpQuestion[]>>;
+  close?(): Promise<void>;
 }

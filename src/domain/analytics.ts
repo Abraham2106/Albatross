@@ -90,7 +90,7 @@ export function findRefreshOpportunities(
     for (const fact of site.facts) {
       for (const group of fact.groups) {
         if (group.approxAgeYears === undefined || group.approxAgeYears < minAgeYears) continue;
-        if (group.quantity === 0) continue;
+        if (group.quantity === undefined || group.quantity === 0) continue;
         out.push({
           siteId: site.id,
           siteName: site.name,

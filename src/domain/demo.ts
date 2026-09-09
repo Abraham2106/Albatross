@@ -16,7 +16,7 @@ import {
   resolveDispute,
   sitesNeedingAttention,
   type Candidate,
-} from "../src/index";
+} from "./index";
 
 const NOW = "2026-09-09T12:00:00.000Z";
 const line = (t: string) => console.log(`\n=== ${t} ===`);

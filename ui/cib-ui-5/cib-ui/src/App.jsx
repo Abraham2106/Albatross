@@ -44,10 +44,10 @@ export default function App() {
     <div className="marco">
       {pantalla}
       <nav className="nav">
-        <button data-activo={tab === 'clientes' && !clienteId} onClick={() => ir('clientes')}>
+        <button data-testid="cib-nav-hospitales" data-activo={tab === 'clientes' && !clienteId} onClick={() => ir('clientes')}>
           <Lista /> Hospitales
         </button>
-        <button data-activo={tab === 'captura'} onClick={() => ir('captura')}>
+        <button data-testid="cib-nav-captura" data-activo={tab === 'captura'} onClick={() => ir('captura')}>
           <Micro /> Capturar
         </button>
         <button data-activo={tab === 'mapa' && !clienteId} onClick={() => ir('mapa')}>

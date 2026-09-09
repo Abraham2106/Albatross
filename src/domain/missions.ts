@@ -82,7 +82,7 @@ export function rankMissingFields(
       continue;
     }
 
-    if (totalQuantity(fact) === 0) continue; // el sitio confirmo que no tiene: no se pregunta mas
+    if (totalQuantity(fact) === 0 && fact.groups.every(g => g.quantity !== undefined)) continue; // el sitio confirmo que no tiene: no se pregunta mas
 
     missions.push(...incompleteFieldMissions(site.id, fact, weight));
 
@@ -111,6 +111,12 @@ function incompleteFieldMissions(
   weight: number
 ): MissionQuestion[] {
   const out: MissionQuestion[] = [];
+
+  if (fact.groups.some(g => g.quantity === undefined)) {
+    out.push({ siteId, modality: fact.modality, field: "quantity",
+      prompt: `¿Cuántos equipos de ${fact.modality} tienen?`,
+      priority: REQUIREMENT_WEIGHT.Required * REASON_MULTIPLIER.missing, reason: "missing" });
+  }
 
   const missingBrand = fact.groups.some((g) => g.brand === UNKNOWN);
   if (missingBrand) {
@@ -198,11 +204,11 @@ function dedupe(missions: readonly MissionQuestion[]): MissionQuestion[] {
 export function buildReviewSummary(site: Site): string {
   const parts = site.facts.flatMap((fact) =>
     fact.groups
-      .filter((g) => g.quantity > 0)
+      .filter((g) => g.quantity === undefined || g.quantity > 0)
       .map((g) => {
         const brand = g.brand === UNKNOWN ? "marca desconocida" : g.brand;
         const age = g.approxAgeYears !== undefined ? `, ~${g.approxAgeYears} anios` : "";
-        return `${g.quantity} ${fact.modality} (${brand}${age})`;
+        return `${g.quantity ?? "?"} ${fact.modality} (${brand}${age})`;
       })
   );
   if (parts.length === 0) return `No hay equipos registrados en ${site.name}. ¿Es correcto?`;

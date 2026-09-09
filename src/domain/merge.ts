@@ -52,7 +52,7 @@ export function createSite(params: {
 
 export function totalQuantity(fact: ModalityFact | undefined): number {
   if (!fact) return 0;
-  return fact.groups.reduce((sum, g) => sum + g.quantity, 0);
+  return fact.groups.reduce((sum, g) => sum + (g.quantity ?? 0), 0);
 }
 
 export function findFact(site: Site, modality: ModalityFact["modality"]): ModalityFact | undefined {
@@ -67,6 +67,8 @@ export function findFact(site: Site, modality: ModalityFact["modality"]): Modali
  */
 export function isBareTotalClaim(candidate: Candidate): boolean {
   return (
+    candidate.scope !== "group" &&
+    !candidate.groupLabel &&
     candidate.quantity !== undefined &&
     !isKnown(candidate.brand) &&
     candidate.approxAgeYears === undefined
@@ -87,6 +89,7 @@ export function compareCandidate(
   const modality = fact.modality;
 
   if (isBareTotalClaim(candidate)) {
+    if (fact.groups.some(g => g.quantity === undefined)) return { kind: "new" };
     const existingTotal = totalQuantity(fact);
     const newTotal = candidate.quantity as number;
     if (existingTotal === newTotal) {
@@ -111,7 +114,7 @@ export function compareCandidate(
   const group = fact.groups[matchIndex];
   if (!group) return { kind: "new" };
 
-  if (candidate.quantity !== undefined && candidate.quantity !== group.quantity) {
+  if (candidate.quantity !== undefined && group.quantity !== undefined && candidate.quantity !== group.quantity) {
     return {
       kind: "conflict",
       field: "quantity",
@@ -133,6 +136,8 @@ export function findMatchingGroupIndex(fact: ModalityFact, candidate: Candidate)
   const age = candidate.approxAgeYears;
 
   return fact.groups.findIndex((g) => {
+    if ((candidate.groupLabel || g.groupLabel) && candidate.groupLabel !== g.groupLabel) return false;
+    if (isKnown(candidate.model) && isKnown(g.model) && normalizeModel(candidate.model) !== g.model) return false;
     const brandMatches =
       // misma marca
       g.brand === brand ||
@@ -147,7 +152,7 @@ export function findMatchingGroupIndex(fact: ModalityFact, candidate: Candidate)
 }
 
 function buildObservationRef(candidate: Candidate): ObservationRef {
-  const age = candidate.approxAgeYears ?? parseApproxAge(candidate.rawAnswerText);
+  const age = candidate.approxAgeYears ?? (candidate.extractedAge ? undefined : parseApproxAge(candidate.rawAnswerText));
   return {
     observationId: deterministicId(
       "obs",
@@ -158,6 +163,7 @@ function buildObservationRef(candidate: Candidate): ObservationRef {
       candidate.quantity,
       candidate.brand,
       candidate.model,
+      candidate.groupLabel,
       age
     ),
     author: candidate.source.author,
@@ -183,10 +189,13 @@ function buildGroup(candidate: Candidate, ref: ObservationRef): EquipmentGroup {
       candidate.siteId,
       candidate.modality,
       normalizeBrand(candidate.brand),
+      candidate.model,
+      candidate.groupLabel,
       age,
       candidate.source.timestamp
     ),
-    quantity: candidate.quantity ?? 0,
+    ...(candidate.quantity !== undefined ? { quantity: candidate.quantity } : {}),
+    ...(candidate.groupLabel ? { groupLabel: candidate.groupLabel } : {}),
     brand: normalizeBrand(candidate.brand),
     model: normalizeModel(candidate.model),
     ...(age !== undefined ? { approxAgeYears: age } : {}),
@@ -210,6 +219,7 @@ function corroborateGroup(group: EquipmentGroup, candidate: Candidate, ref: Obse
 
   return {
     ...group,
+    ...(group.quantity === undefined && candidate.quantity !== undefined ? { quantity: candidate.quantity } : {}),
     // Un dato desconocido se completa; uno ya conocido no se pisa.
     brand: group.brand === UNKNOWN ? normalizeBrand(candidate.brand) : group.brand,
     model: group.model === UNKNOWN ? normalizeModel(candidate.model) : group.model,
@@ -319,7 +329,7 @@ export function mergeCandidate(site: Site, candidate: Candidate): MergeResult {
   }
 
   // Caso 3b: total que coincide -> corrobora la modalidad completa
-  if (isBareTotalClaim(candidate)) {
+  if (isBareTotalClaim(candidate) && comparison.kind !== "new") {
     const alreadyRecorded = fact.totalObservations.some((o) => o.observationId === ref.observationId);
     const totalObservations = alreadyRecorded ? fact.totalObservations : [...fact.totalObservations, ref];
     const groups = fact.groups.map((g) => ({
@@ -394,14 +404,14 @@ export function resolveDispute(
     let largestIndex = 0;
     fact.groups.forEach((g, i) => {
       const largest = fact.groups[largestIndex];
-      if (largest && g.quantity > largest.quantity) largestIndex = i;
+      if (largest && (g.quantity ?? 0) > (largest.quantity ?? 0)) largestIndex = i;
     });
     const target = fact.groups[largestIndex];
     if (!target) return { ...fact, disputes };
 
     const adjusted: EquipmentGroup = {
       ...target,
-      quantity: Math.max(0, target.quantity + delta),
+      quantity: Math.max(0, (target.quantity ?? 0) + delta),
       confidence: "High",
       status: "Confirmed",
     };

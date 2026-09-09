@@ -1,13 +1,21 @@
 /**
  * Cliente de API.
  *
- * La UI no tiene datos propios. Todo viene del backend.
- * Si el backend no responde, cada pantalla muestra su estado de error.
- *
- * Los ejemplos de lo que cada ruta debe devolver estan en docs/contrato-api.json
+ * En Electron usa window.philips (VisitService + QVAC).
+ * Fuera de Electron, fetch('/api') hacia el backend HTTP si existe.
  */
 
 const BASE = import.meta.env.VITE_API_URL || '/api';
+
+function desktop() {
+  return typeof window !== 'undefined' ? window.philips : undefined;
+}
+
+async function viaDesktop(run) {
+  const result = await run();
+  if (!result.ok) throw new Error(result.error.message);
+  return result.data;
+}
 
 async function pedir(ruta, opciones = {}) {
   let res;
@@ -17,36 +25,47 @@ async function pedir(ruta, opciones = {}) {
       ...opciones
     });
   } catch {
-    // fetch solo tira excepcion si no hubo respuesta del servidor
     throw new Error('SIN_BACKEND');
   }
   if (!res.ok) throw new Error(`HTTP_${res.status}`);
   return res.json();
 }
 
-/** Lista para la pantalla principal. `pendientes` viene como numero. */
-export const listarClientes = () => pedir('/clientes');
+export const listarClientes = () => {
+  const api = desktop();
+  return api?.clientes ? viaDesktop(() => api.clientes()) : pedir('/clientes');
+};
 
-/** Ficha completa con equipos[] y pendientes[]. */
-export const obtenerCliente = (id) => pedir(`/clientes/${id}`);
+export const obtenerCliente = (id) => {
+  const api = desktop();
+  return api?.cliente ? viaDesktop(() => api.cliente(id)) : pedir(`/clientes/${id}`);
+};
 
-/** Jerarquia Region → Pais → Ciudad → Hospital. */
-export const obtenerGeo = () => pedir('/geo');
+export const obtenerGeo = () => {
+  const api = desktop();
+  return api?.geo ? viaDesktop(() => api.geo()) : pedir('/geo');
+};
 
-/** Metricas agregadas y oportunidades de renovacion. */
-export const obtenerResumen = (pais) =>
-  pedir(pais ? `/resumen?pais=${encodeURIComponent(pais)}` : '/resumen');
+export const obtenerResumen = (pais) => {
+  const api = desktop();
+  return api?.resumen ? viaDesktop(() => api.resumen(pais)) : pedir(pais ? `/resumen?pais=${encodeURIComponent(pais)}` : '/resumen');
+};
 
-/**
- * Manda el texto libre. El backend lo pasa por QVAC y devuelve
- * lo extraido para que el usuario lo confirme.
- */
-export const extraer = (texto) =>
-  pedir('/observaciones', { method: 'POST', body: JSON.stringify({ texto }) });
+export const extraer = (texto, audio) => {
+  const api = desktop();
+  if (api?.extraer) {
+    return viaDesktop(() => api.extraer(crypto.randomUUID(), audio ? { audio } : { texto }));
+  }
+  return pedir('/observaciones', { method: 'POST', body: JSON.stringify({ texto }) });
+};
 
-/** respuestas = { itemId: 'si' | 'no' | 'nose' } */
-export const confirmar = (observacionId, respuestas) =>
-  pedir(`/observaciones/${observacionId}/confirmar`, {
+export const confirmar = (observacionId, respuestas) => {
+  const api = desktop();
+  if (api?.confirmar) {
+    return viaDesktop(() => api.confirmar({ observacionId, respuestas }));
+  }
+  return pedir(`/observaciones/${observacionId}/confirmar`, {
     method: 'POST',
     body: JSON.stringify({ respuestas })
   });
+};

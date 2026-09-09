@@ -1,8 +1,19 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+
+const root = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   base: './',
+  resolve: {
+    alias: {
+      react: resolve(root, 'node_modules/react'),
+      'react-dom': resolve(root, 'node_modules/react-dom'),
+    },
+    dedupe: ['react', 'react-dom'],
+  },
   plugins: [react(), {
     name: 'development-csp',
     transformIndexHtml(html, context) {

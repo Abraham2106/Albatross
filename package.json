@@ -11,7 +11,7 @@
     "dev": "npm run build:electron && node scripts/dev.mjs",
     "dev:web": "vite --host 127.0.0.1",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
-    "build:electron": "tsc -p tsconfig.electron.json",
+    "build:electron": "node scripts/build-electron.mjs",
     "build": "npm run typecheck && vite build && npm run build:electron",
     "start": "node scripts/launch.mjs",
     "smoke": "node scripts/launch.mjs --smoke-test",
@@ -19,7 +19,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@qvac/sdk": "0.19.0",
+    "@qvac/sdk": "0.18.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
@@ -29,6 +29,7 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "electron": "^44.3.0",
+    "esbuild": "0.28.2",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vitest": "^5.0.0"

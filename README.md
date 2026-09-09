@@ -1,6 +1,6 @@
-# Philips — base de escritorio
+# Philips — Installed Base Intelligence
 
-Base inicial de Electron + React + Vite + TypeScript. QVAC y las funciones del producto están pendientes de implementación. La estructura de dominio propuesta conserva sus `.gitkeep`.
+Aplicación de escritorio Electron + React + Vite + TypeScript. La UI es la de Marco (`ui/cib-ui-5/cib-ui`): hospitales, captura, cobertura y panorama. Electron la sirve y habla con VisitService/QVAC por `window.philips`. El SDK está fijado en `@qvac/sdk@0.18.2`. Los modelos **no se cargan** hasta `QVAC_ENABLE_MODELS=1`.
 
 ## Uso
 
@@ -12,13 +12,18 @@ npm run dev
 ```
 
 - `npm run dev`: inicia Vite y abre Electron; React se actualiza con HMR. Reinicia el comando después de editar el proceso principal o preload.
-- `npm run dev:web`: inicia únicamente la interfaz en el navegador.
+- `npm run dev:web`: la misma UI en el navegador, sin IPC; las pantallas quedan vacías hasta que exista un backend HTTP.
 - `npm run build`: verifica tipos y compila interfaz y Electron.
 - `npm start`: abre Electron con el build local; requiere `npm run build` previamente.
 - `npm run smoke`: comprueba el build en una ventana Electron oculta y cierra automáticamente.
 
-La compilación todavía no genera un instalador. La interfaz no tiene acceso directo a Node; se reservó un preload aislado para futuros contratos IPC. No se instaló Fastify, QVAC, persistencia ni sincronización P2P.
+La interfaz no tiene acceso a Node: el preload expone solo `window.philips`. Fastify, sincronización P2P y el instalador no están implementados.
 
-## Integración con inferencia simulada
+- [Guía de validación conjunta](docs/qvac-validation.md)
 
-Infraestructura puede usar `MockInferenceEngine` para trabajar con transcripción, extracción y preguntas sin modelos reales. Ver [contrato, ejemplos y escenarios](docs/mock-inference.md). Ejecutar `npm run test` para comprobar su comportamiento.
+```sh
+npm run test
+npm run typecheck
+```
+
+La inferencia es solo QVAC. Sin `QVAC_ENABLE_MODELS=1` no se cargan pesos. En PowerShell con scripts bloqueados, usar `npm.cmd`.
