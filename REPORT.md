@@ -1,6 +1,6 @@
 # REPORT.md — medicion de extraccion
 
-Generado por `scripts/measure.mjs` el 2026-09-09T20:00:49.115Z.
+Generado por `scripts/measure.mjs` el 2026-09-09T20:05:51.622Z.
 
 - Adaptador activo: `ALBATROSS_ADAPTER=mock`
 - Referencia: `fixtures/voice-tests.json` (hoja **Voice Test Prompts** de `Dummy_Installed_Base_Hackathon.xlsx`)
@@ -41,7 +41,7 @@ enunciado no menciona. Cero es el objetivo: la hoja Agent Question Logic pide
 
 | Caso | ms | Filas esp./emit. | Resultado |
 | ---: | ---: | :---: | --- |
-| 1 | 0.1 | 2 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
+| 1 | 0.2 | 2 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
 | 2 | 0.0 | 2 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
 | 3 | 0.0 | 1 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
 | 4 | 0.0 | 2 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
@@ -52,7 +52,7 @@ enunciado no menciona. Cero es el objetivo: la hoja Agent Question Logic pide
 | 9 | 0.0 | 2 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
 | 10 | 0.0 | 1 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
 
-Mediana 0.0 ms · minimo 0.0 ms · maximo 0.1 ms.
+Mediana 0.0 ms · minimo 0.0 ms · maximo 0.2 ms.
 
 ## Distribucion de Status
 

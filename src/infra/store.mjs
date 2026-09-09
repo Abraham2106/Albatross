@@ -2,7 +2,7 @@
  * Persistencia local de observaciones.
  *
  * Frontera: este modulo guarda y lee. No calcula nada. Confidence, Status y
- * Estimated Installation Year llegan ya resueltos desde src/dominio/; si faltan
+ * Estimated Installation Year llegan ya resueltos desde src/domain/; si faltan
  * se guardan como null, nunca se derivan aqui.
  *
  * Las columnas se llaman literalmente como en la hoja "Dummy Installed Base"
@@ -44,7 +44,7 @@ const COLUMN_TYPES = {
   'Estimated Installation Year': 'INTEGER',
 };
 
-const q = (name) => `"${name.replaceAll('"', '""')}"`;
+const q = (name) => `"${name}"`;
 
 const DDL = `
 CREATE TABLE IF NOT EXISTS observations (

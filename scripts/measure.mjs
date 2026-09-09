@@ -65,34 +65,21 @@ async function loadEngine(name) {
 }
 
 /**
- * El dominio vive en src/domain/ (nombre del architecture.md) y NO expone un
- * deriveFields(row): expone tres funciones puras separadas. Nos adaptamos a
- * ellas en vez de pedirle que cambie.
+ * El dominio vive en src/domain/ y NO expone un deriveFields(row): expone
+ * funciones puras separadas. Nos adaptamos a ellas.
  *
- *   deriveConfidence(rawAnswerText)              -> "High" | "Medium" | "Low"
- *   deriveStatus(channel, rawAnswerText)         -> "Confirmed" | "Reported" | "Estimated" | "Unknown"
- *   deriveInstallYear(visitTimestamp, ageYears)  -> number | undefined
+ *   deriveConfidence(rawAnswerText)       -> "High" | "Medium" | "Low"
+ *   deriveStatus(channel, rawAnswerText)  -> "Confirmed" | "Reported" | "Estimated" | "Unknown"
  */
 async function loadDomain() {
   const entry = 'src/domain/index.ts';
   if (!existsSync(fileURLToPath(rel(entry)))) return null;
   const mod = await import(rel(entry).href);
-  const missing = ['deriveConfidence', 'deriveStatus', 'deriveInstallYear']
+  const missing = ['deriveConfidence', 'deriveStatus']
     .filter((f) => typeof mod[f] !== 'function');
-  if (missing.length > 0) return { path: entry, mod: null, reason: `no exporta ${missing.join(', ')}` };
+  if (missing.length > 0) return { path: entry, mod: null };
   return { path: entry, mod };
 }
-
-/**
- * Traduccion en el punto de union. El dominio nombra sus campos en camelCase;
- * el store usa el nombre literal de la hoja Dummy Installed Base. El store no
- * se toca: la hoja es la referencia, asi que la traduccion vive aqui.
- */
-const DOMAIN_TO_SHEET = {
-  confidence: 'Confidence',
-  status: 'Status',
-  estimatedInstallYear: 'Estimated Installation Year',
-};
 
 const MODALITY_ALIASES = { MRI: 'MR', SCANNER: 'CT', US: 'Ultrasound', ULTRASOUND: 'Ultrasound' };
 const normModality = (m) => {
@@ -202,35 +189,26 @@ async function main() {
         if (verdict === 'relleno' && (field === 'marca' || field === 'edad')) relleno = true;
       }
       // modelo no entra en la exactitud por campo pedida, pero si en el relleno.
-      if (expected.modelo === null && row !== null && (row.modelo ?? row.model ?? null) !== null) {
+      if (expected.modelo === null && row !== null && (row.modelo ?? null) !== null) {
         relleno = true;
       }
     }
     for (const row of extra) {
-      if (pick(row, 'marca') !== null || (row.modelo ?? row.model ?? null) !== null) relleno = true;
+      if (pick(row, 'marca') !== null || (row.modelo ?? null) !== null) relleno = true;
     }
 
     if (domain?.mod) {
       // El enunciado es el texto crudo del que el dominio infiere certeza y estado.
-      const raw = testCase.en;
-      for (const row of emitted) {
-        const derived = {
-          [DOMAIN_TO_SHEET.confidence]: domain.mod.deriveConfidence(raw),
-          [DOMAIN_TO_SHEET.status]: domain.mod.deriveStatus('Voice', raw),
-          [DOMAIN_TO_SHEET.estimatedInstallYear]: domain.mod.deriveInstallYear(
-            new Date().toISOString(),
-            pick(row, 'edad') ?? undefined,
-          ),
-        };
-        const st = derived.Status ?? 'sin valor';
-        const cf = derived.Confidence ?? 'sin valor';
+      const st = domain.mod.deriveStatus('Voice', testCase.en);
+      const cf = domain.mod.deriveConfidence(testCase.en);
+      for (let i = 0; i < emitted.length; i += 1) {
         statusDist.set(st, (statusDist.get(st) ?? 0) + 1);
         confidenceDist.set(cf, (confidenceDist.get(cf) ?? 0) + 1);
       }
     }
 
     results.push({
-      id: testCase.id, en: testCase.en, latencyMs, error, relleno,
+      id: testCase.id, latencyMs, error, relleno,
       esperadas: testCase.expected.length, emitidas: emitted.length,
     });
   }
@@ -245,9 +223,7 @@ async function main() {
   const dist = (map, label) => (map.size === 0
     ? `No disponible: ${domain?.mod
       ? `${domain.path} cargo correctamente, pero el adaptador no emitio ninguna fila sobre la cual derivar`
-      : domain
-        ? `${domain.path} ${domain.reason}`
-        : 'src/domain/ no encontrado, y este script no calcula campos derivados'}.`
+      : 'src/domain/ no encontrado o sin las funciones de derivacion'}.`
     : [`| ${label} | Filas | Proporcion |`, '| --- | ---: | ---: |',
       ...[...map].sort((a, b) => b[1] - a[1])
         .map(([k, v]) => `| ${k} | ${v} | ${pct(v, emitidas)} |`)].join('\n'));
@@ -259,7 +235,7 @@ Generado por \`scripts/measure.mjs\` el ${new Date().toISOString()}.
 - Adaptador activo: \`ALBATROSS_ADAPTER=${ADAPTER}\`
 - Referencia: \`fixtures/voice-tests.json\` (hoja **${fixture.fuente.hoja}** de \`${fixture.fuente.archivo}\`)
 - Casos: ${total}
-- Dominio: ${domain ? `\`${domain.path}\`${domain.mod ? '' : ` (${domain.reason})`}` : '`src/domain/` no encontrado'}
+- Dominio: ${domain?.mod ? `\`${domain.path}\`` : '`src/domain/` no disponible'}
 
 ## Exactitud por campo
 
