@@ -11,8 +11,6 @@ npm install
 npm run dev
 ```
 
-En PowerShell con scripts bloqueados, usa `npm.cmd` en lugar de `npm`.
-
 - `npm run dev`: inicia Vite y abre Electron; React se actualiza con HMR. Reinicia el comando después de editar el proceso principal o preload.
 - `npm run dev:web`: inicia únicamente la interfaz en el navegador.
 - `npm run build`: verifica tipos y compila interfaz y Electron.
