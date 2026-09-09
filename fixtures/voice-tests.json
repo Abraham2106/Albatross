@@ -1,0 +1,118 @@
+{
+  "fuente": {
+    "archivo": "Dummy_Installed_Base_Hackathon.xlsx",
+    "hoja": "Voice Test Prompts",
+    "columnas_usadas": ["Test #", "Voice Input", "Expected Structured Output"],
+    "por_que_esta_hoja": [
+      "Voice Test Prompts es la unica hoja que pareja un enunciado hablado con la salida estructurada esperada de ese enunciado. Es por definicion la referencia de una prueba de extraccion: entrada -> salida esperada.",
+      "La hoja Dummy Installed Base es una semilla de base de datos (el README del libro la describe como 'expected output / database seed'), no un juego de pruebas. Sus filas contienen campos que ningun enunciado menciona (Observer, Visit Date, City, Dummy Model, Estimated Installation Year) y valores que contradicen el enunciado correspondiente. Medir contra ella premiaria a un extractor que inventa.",
+      "Ademas los enunciados de la columna Voice Input Example de Dummy Installed Base no coinciden literalmente con los de Voice Test Prompts; son parafrasis. Mezclar ambas hojas produciria pares entrada/salida que no existen en ninguna de las dos."
+    ],
+    "no_es_referencia": {
+      "hoja": "Dummy Installed Base",
+      "uso_legitimo": "semilla para poblar la base y probar persistencia, listados y vecinos; nunca como verdad esperada de la extraccion."
+    },
+    "convenciones": {
+      "null": "el enunciado no toca el tema. No es lo mismo que 'Unknown'.",
+      "Unknown": "el hablante afirma explicitamente que no sabe, o la hoja lo declara asi en Expected Structured Output. Es un valor que el extractor debe emitir, no un hueco.",
+      "cantidad_aprox": "true cuando el enunciado marca la cantidad como estimada ('about', 'maybe'). El entero es el centro de la estimacion, no un conteo exacto.",
+      "edad_aprox": "true cuando el enunciado marca la edad como estimada ('around', 'maybe').",
+      "edad_cualitativa": "texto del enunciado cuando la edad es cualitativa y no numerica ('old', 'new', 'recent'). En esos casos edad es null y no debe compararse como numero.",
+      "filas": "cada fila es comparable campo por campo contra una fila emitida. La prosa 'MR=2 | CT=1' de la hoja se descompone; no se conserva como cadena."
+    }
+  },
+  "casos": [
+    {
+      "id": 1,
+      "en": "I am at Hospital DemoCare Pacific in Panama. They have two MR systems and one CT.",
+      "es": "",
+      "expected": [
+        { "cliente": "Hospital DemoCare Pacific", "pais": "Panama", "ciudad": null, "modalidad": "MR", "cantidad": 2, "cantidad_aprox": false, "marca": null, "modelo": null, "edad": null, "edad_aprox": false, "edad_cualitativa": null },
+        { "cliente": "Hospital DemoCare Pacific", "pais": "Panama", "ciudad": null, "modalidad": "CT", "cantidad": 1, "cantidad_aprox": false, "marca": null, "modelo": null, "edad": null, "edad_aprox": false, "edad_cualitativa": null }
+      ]
+    },
+    {
+      "id": 2,
+      "en": "At Hospital DemoCare Horizon I saw three MR systems. Two seem old and one looks much newer.",
+      "es": "",
+      "expected": [
+        { "cliente": "Hospital DemoCare Horizon", "pais": null, "ciudad": null, "modalidad": "MR", "cantidad": 2, "cantidad_aprox": false, "marca": null, "modelo": null, "edad": null, "edad_aprox": false, "edad_cualitativa": "old" },
+        { "cliente": "Hospital DemoCare Horizon", "pais": null, "ciudad": null, "modalidad": "MR", "cantidad": 1, "cantidad_aprox": false, "marca": null, "modelo": null, "edad": null, "edad_aprox": false, "edad_cualitativa": "newer" }
+      ],
+      "nota": "Discrepancia con la semilla. El enunciado dice tres MR repartidos en dos grupos (dos viejos, uno mas nuevo), asi que las cantidades esperadas son 2 y 1 y suman tres. Las filas 3 y 4 de la hoja Dummy Installed Base registran MR=3 y MR=1, que suman cuatro. La fila 3 parece haber copiado el total del enunciado en lugar de la cantidad del grupo viejo, y su campo Notes dice 'Aggregate row for older systems', lo que confirma que deberia valer 2. La referencia es el enunciado: 2 y 1. Un extractor que emita 3 y 1 cuenta como error de cantidad, no como acierto."
+    },
+    {
+      "id": 3,
+      "en": "Clinica DemoCare Light has two CT scanners, both Orion Imaging, around eleven years old.",
+      "es": "",
+      "expected": [
+        { "cliente": "Clinica DemoCare Light", "pais": null, "ciudad": null, "modalidad": "CT", "cantidad": 2, "cantidad_aprox": false, "marca": "Orion Imaging", "modelo": null, "edad": 11, "edad_aprox": true, "edad_cualitativa": null }
+      ]
+    },
+    {
+      "id": 4,
+      "en": "Centro Medico DemoCare Valley has one MR and two CTs. I do not know the brands.",
+      "es": "",
+      "expected": [
+        { "cliente": "Centro Medico DemoCare Valley", "pais": null, "ciudad": null, "modalidad": "MR", "cantidad": 1, "cantidad_aprox": false, "marca": "Unknown", "modelo": "Unknown", "edad": null, "edad_aprox": false, "edad_cualitativa": null },
+        { "cliente": "Centro Medico DemoCare Valley", "pais": null, "ciudad": null, "modalidad": "CT", "cantidad": 2, "cantidad_aprox": false, "marca": "Unknown", "modelo": "Unknown", "edad": null, "edad_aprox": false, "edad_cualitativa": null }
+      ],
+      "nota": "El hablante declara explicitamente que no conoce las marcas, y no menciona modelo alguno: marca y modelo esperados son 'Unknown'. Las filas 7 y 8 de la semilla rellenan Zenith MedTech / ZM-MR 810 y Aurelia Health / AH-CT 510. Esos valores no estan en el enunciado; la semilla no es la referencia y emitirlos cuenta como relleno inventado."
+    },
+    {
+      "id": 5,
+      "en": "Hospital DemoCare North has about six ultrasound units, mostly new.",
+      "es": "",
+      "expected": [
+        { "cliente": "Hospital DemoCare North", "pais": null, "ciudad": null, "modalidad": "Ultrasound", "cantidad": 6, "cantidad_aprox": true, "marca": null, "modelo": null, "edad": null, "edad_aprox": false, "edad_cualitativa": "new" }
+      ],
+      "nota": "'about six' marca la cantidad como aproximada: cantidad_aprox = true. Seis es el centro de la estimacion, no un conteo exacto, y la hoja lo escribe como 'Ultrasound~6'. 'mostly new' es edad cualitativa, no un numero de anos."
+    },
+    {
+      "id": 6,
+      "en": "Clinica DemoCare Andes has one very old CT and two MR systems from the same manufacturer.",
+      "es": "",
+      "expected": [
+        { "cliente": "Clinica DemoCare Andes", "pais": null, "ciudad": null, "modalidad": "CT", "cantidad": 1, "cantidad_aprox": false, "marca": null, "modelo": null, "edad": null, "edad_aprox": false, "edad_cualitativa": "very old" },
+        { "cliente": "Clinica DemoCare Andes", "pais": null, "ciudad": null, "modalidad": "MR", "cantidad": 2, "cantidad_aprox": false, "marca": null, "modelo": null, "edad": null, "edad_aprox": false, "edad_cualitativa": null }
+      ],
+      "nota": "'from the same manufacturer' afirma que las dos MR comparten marca, pero no la nombra. Es una relacion entre filas, no un valor de campo, asi que marca queda null en ambas. Emitir una marca concreta aqui es relleno inventado."
+    },
+    {
+      "id": 7,
+      "en": "Hospital DemoCare Park has one MR, maybe ten years old, plus three CT scanners.",
+      "es": "",
+      "expected": [
+        { "cliente": "Hospital DemoCare Park", "pais": null, "ciudad": null, "modalidad": "MR", "cantidad": 1, "cantidad_aprox": false, "marca": null, "modelo": null, "edad": 10, "edad_aprox": true, "edad_cualitativa": null },
+        { "cliente": "Hospital DemoCare Park", "pais": null, "ciudad": null, "modalidad": "CT", "cantidad": 3, "cantidad_aprox": false, "marca": null, "modelo": null, "edad": null, "edad_aprox": false, "edad_cualitativa": null }
+      ]
+    },
+    {
+      "id": 8,
+      "en": "Clinica DemoCare Central has many ultrasound systems, maybe eight, all Aurelia Health.",
+      "es": "",
+      "expected": [
+        { "cliente": "Clinica DemoCare Central", "pais": null, "ciudad": null, "modalidad": "Ultrasound", "cantidad": 8, "cantidad_aprox": true, "marca": "Aurelia Health", "modelo": null, "edad": null, "edad_aprox": false, "edad_cualitativa": null }
+      ],
+      "nota": "'many ... maybe eight' marca la cantidad como aproximada: cantidad_aprox = true. La hoja lo escribe como 'Ultrasound~8'. La marca si esta afirmada sin reserva ('all Aurelia Health'); el modelo no se menciona."
+    },
+    {
+      "id": 9,
+      "en": "Instituto DemoCare Lima has two old CTs and one recently installed MR.",
+      "es": "",
+      "expected": [
+        { "cliente": "Instituto DemoCare Lima", "pais": null, "ciudad": null, "modalidad": "CT", "cantidad": 2, "cantidad_aprox": false, "marca": null, "modelo": null, "edad": null, "edad_aprox": false, "edad_cualitativa": "old" },
+        { "cliente": "Instituto DemoCare Lima", "pais": null, "ciudad": null, "modalidad": "MR", "cantidad": 1, "cantidad_aprox": false, "marca": null, "modelo": null, "edad": null, "edad_aprox": false, "edad_cualitativa": "recent" }
+      ]
+    },
+    {
+      "id": 10,
+      "en": "Hospital DemoCare Metro North has two MR systems. I know the brand is Aurelia Health but not the model.",
+      "es": "",
+      "expected": [
+        { "cliente": "Hospital DemoCare Metro North", "pais": null, "ciudad": null, "modalidad": "MR", "cantidad": 2, "cantidad_aprox": false, "marca": "Aurelia Health", "modelo": "Unknown", "edad": null, "edad_aprox": false, "edad_cualitativa": null }
+      ],
+      "nota": "REVISAR. La instruccion recibida pedia marca y modelo 'Unknown' para este caso, pero el enunciado nombra la marca ('I know the brand is Aurelia Health') y la columna Expected Structured Output de la hoja tambien la da: 'MR=2 | Aurelia Health | Model=Unknown'. Solo el modelo es Unknown. Se dejo marca = 'Aurelia Health' por coherencia con la hoja, que es la referencia declarada. Si la intencion era marca Unknown, cambiar aqui y en ningun otro lugar. La fila 20 de la semilla coincide en la marca pero inventa el modelo AH-MR 650, que el enunciado niega conocer."
+    }
+  ]
+}
