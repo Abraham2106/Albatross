@@ -1,4 +1,5 @@
-  import type { ProcessVisitInput, ReviewInput, VisitService } from './visits';
+import type { ProcessVisitInput, ReviewInput, VisitService } from './visits';
+import type { NetworkAuditReport } from './network-audit';
 import type { CibService } from './cib-service';
 import type { InferenceErrorCode, TranscriptionRequest } from './ports/inference-engine';
 export type Result<T> = { ok: true; data: T } | { ok: false; error: { code: InferenceErrorCode; message: string } };
@@ -14,7 +15,8 @@ export interface DesktopApi {
   profile(id: string): Promise<Result<ReturnType<VisitService['getProfile']>>>;
   process(requestId: string, input: ProcessVisitInput): Promise<Result<Awaited<ReturnType<VisitService['process']>>>>;
   accept(input: ReviewInput): Promise<Result<ReturnType<VisitService['accept']>>>;
-    verifyIntegrity(): Promise<Result<ReturnType<VisitService['verifyIntegrity']>>>;
+  verifyIntegrity(): Promise<Result<ReturnType<VisitService['verifyIntegrity']>>>;
+  networkAudit(): Promise<Result<NetworkAuditReport>>;
   followUps(requestId: string, hospitalId: string): Promise<Result<Awaited<ReturnType<VisitService['followUps']>>>>;
   cancel(requestId: string): Promise<Result<void>>;
   onProgress(listener: (progress: { requestId: string; message: string }) => void): () => void;

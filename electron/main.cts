@@ -1,6 +1,7 @@
 import './hide-bare-console.cjs';
 import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import * as path from 'node:path';
+import { NetworkAudit } from '../src/application/network-audit';
 import * as fs from 'node:fs';
 import { createRuntime } from '../src/bootstrap/desktop';
 import { InferenceError } from '../src/application/ports/inference-engine';
@@ -15,6 +16,7 @@ if (smokeTest) {
   app.disableHardwareAcceleration();
 }
 const devUrl = process.env.VITE_DEV_SERVER_URL;
+const networkAudit = new NetworkAudit(devUrl ? new URL(devUrl).origin : undefined);
 let mainWindow: BrowserWindow | null = null;
 let runtime: ReturnType<typeof createRuntime> | undefined;
 let active: { id: string; controller: AbortController } | undefined;
@@ -45,7 +47,8 @@ function setupHandlers() {
   handle('profile', id => runtime!.service.getProfile(text(id, 'Hospital')));
   handle('process', value => operation(value, (v, signal) => runtime!.service.process(v.input as ProcessVisitInput, { signal })));
   handle('accept', value => runtime!.service.accept(value as ReviewInput));
-    handle('verify-integrity', () => runtime!.service.verifyIntegrity());
+  handle('verify-integrity', () => runtime!.service.verifyIntegrity());
+  handle('network-audit', () => networkAudit.report());
   handle('follow-ups', value => operation(value, (v, signal) => runtime!.service.followUps(text(v.hospitalId, 'Hospital'), { signal })));
   handle('cancel', value => { const id = text(value, 'Solicitud'); if (active?.id === id) active.controller.abort(); });
   handle('clientes', () => runtime!.cib.clientes());
@@ -66,6 +69,9 @@ async function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   mainWindow = window;
+    window.webContents.session.webRequest.onBeforeRequest((details, callback) => {
+    callback({ cancel: networkAudit.record(details.url) === 'blocked' });
+  });
   window.on('closed', () => { active?.controller.abort(); mainWindow = null; });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', event => event.preventDefault());
