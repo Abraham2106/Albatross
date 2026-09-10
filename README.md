@@ -63,7 +63,7 @@ Medición de extracción (evaluador v2, `scripts/measure.mjs`; necesita los peso
 
 - `node --experimental-transform-types scripts/measure.mjs`: diez casos en inglés en GPU → `REPORT.md` y `reports/extraction/<fecha>-en/run.json`.
 - `--es`: los mismos casos en español → `REPORT.es.md`.
-- `--cpu`: carga Qwen con `gpu_layers: 0` para medir sin GPU (laptop de campo) → `REPORT.cpu.md` / `REPORT.es.cpu.md`. Configuración disponible, aún sin correr.
+- `--cpu`: carga Qwen con `gpu_layers: 0` para medir sin GPU (laptop de campo) → `REPORT.cpu.md` / `REPORT.es.cpu.md`. Las cuatro configuraciones (inglés/español × GPU/CPU) se corrieron el 2026-09-10; la comparación está en `REPORT.md` y `REPORT.es.md`.
 - `--replay reports/extraction/<corrida>/run.json`: recalcula métricas sin inferencia.
 - `--self-check`: pruebas del evaluador, sin modelos.
 
