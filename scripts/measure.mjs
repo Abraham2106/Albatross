@@ -40,11 +40,10 @@ const ADAPTER = process.env.ALBATROSS_ADAPTER ?? 'qvac';
 /** Construye el motor de inferencia del adaptador seleccionado. */
 async function loadEngine(name) {
   if (name === 'qvac') {
-    if (process.env.QVAC_ENABLE_MODELS === '1') {
-      throw new Error('measure.mjs no carga modelos reales. Quita QVAC_ENABLE_MODELS y usa --self-check.');
-    }
     const { QvacInferenceEngine } = await import(rel('src/adapters/inference/qvac/index.ts').href);
-    return new QvacInferenceEngine({ enabled: false });
+    const { inspectModels } = await import(rel('src/adapters/inference/qvac/model-pack.ts').href);
+    // Misma regla que la app (src/bootstrap/desktop.ts): si los pesos estan, se usan.
+    return new QvacInferenceEngine({ enabled: inspectModels().ready });
   }
   throw new Error(`ALBATROSS_ADAPTER desconocido: ${name}. Valor: qvac.`);
 }
@@ -150,6 +149,9 @@ async function main() {
   const statusDist = new Map();
   const confidenceDist = new Map();
   const results = [];
+
+  // La primera extraccion carga el modelo: fuera del bucle para no sesgar la latencia.
+  await engine.extractObservations({ hospitalId: 'warmup', transcript: 'Warmup.' }).catch(() => {});
 
   for (const testCase of fixture.casos) {
     const started = performance.now();
@@ -271,6 +273,7 @@ ${dist(confidenceDist, 'Confidence')}
   writeFileSync(fileURLToPath(rel('REPORT.md')), report, 'utf8');
   console.log(`REPORT.md escrito · adaptador ${ADAPTER} · ${total} casos · ${emitidas}/${esperadas} filas · relleno ${pct(conRelleno, total)}`);
   if (conError > 0) console.log(`${conError} de ${total} casos fallaron en el adaptador; el detalle esta en REPORT.md.`);
+  await engine.close?.();
 }
 
 /** Autocomprobacion de la medicion: node scripts/measure.mjs --self-check */
