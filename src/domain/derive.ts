@@ -17,13 +17,14 @@ const FIRM_MARKERS = [
 const HEDGE_MARKERS = [
   "around", "about", "approximately", "roughly", "maybe", "i think", "probably",
   "best estimate", "estimate", "seems", "looks", "appear", "appears", "mostly",
-  "aproximadamente", "como", "creo", "quizas", "tal vez", "parece", "mas o menos",
+  "aproximadamente", "como", "creo", "quiza", "quizas", "tal vez", "parece", "parecen", "mas o menos",
+  "casi todas",
 ];
 
 /** Marcadores de desconocimiento explicito. */
 const UNKNOWN_MARKERS = [
   "i do not know", "i don't know", "not sure", "unknown", "no idea", "could not see",
-  "no se", "no estoy seguro", "desconocido", "no pude ver", "no lo vi",
+  "no se", "no estoy seguro", "desconocido", "desconocidos", "desconocida", "desconocidas", "no pude ver", "no lo vi",
 ];
 
 /**
@@ -31,7 +32,30 @@ const UNKNOWN_MARKERS = [
  * canonicalize() elimina apostrofes: "I don't know" -> "i don t know".
  */
 function containsAny(haystack: string, needles: readonly string[]): boolean {
-  return needles.some((n) => haystack.includes(canonicalize(n)));
+  const haystackTokens = haystack.split(" ");
+  return needles.some((needle) => {
+    const needleTokens = canonicalize(needle).split(" ");
+    if (needleTokens.length === 0 || needleTokens.length > haystackTokens.length) return false;
+    return haystackTokens.some((_, start) =>
+      start + needleTokens.length <= haystackTokens.length &&
+      needleTokens.every((token, offset) => haystackTokens[start + offset] === token)
+    );
+  });
+}
+
+// "unos equipos" no expresa una cifra; "unos nueve años" sí es una estimación.
+const NUMBER_WORDS = [
+  "cero", "uno", "una", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez",
+  "once", "doce", "trece", "catorce", "quince", "dieciseis", "diecisiete", "dieciocho", "diecinueve", "veinte",
+  "veintiuno", "veintiuna", "veintidos", "veintitres", "veinticuatro", "veinticinco", "veintiseis", "veintisiete", "veintiocho", "veintinueve",
+  "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa", "cien", "ciento", "mil",
+];
+const NUMERIC_ESTIMATE_RE = new RegExp(
+  `\\b(?:unos|unas)\\s+(?:\\d+|${NUMBER_WORDS.join("|")})\\b`
+);
+
+function containsHedge(t: string): boolean {
+  return containsAny(t, HEDGE_MARKERS) || NUMERIC_ESTIMATE_RE.test(t);
 }
 
 /**
@@ -44,7 +68,7 @@ export function deriveConfidence(rawAnswerText: string | undefined): ConfidenceL
   if (t.length === 0) return "Low";
   if (containsAny(t, UNKNOWN_MARKERS)) return "Low";
   if (containsAny(t, FIRM_MARKERS)) return "High";
-  if (containsAny(t, HEDGE_MARKERS)) return "Medium";
+  if (containsHedge(t)) return "Medium";
   return "High"; // afirmacion directa, sin matizar
 }
 
@@ -59,7 +83,7 @@ export function deriveStatus(
   const t = rawAnswerText ? canonicalize(rawAnswerText) : "";
   if (containsAny(t, UNKNOWN_MARKERS)) return "Unknown";
   if (channel === "Photo" || containsAny(t, FIRM_MARKERS)) return "Confirmed";
-  if (containsAny(t, HEDGE_MARKERS)) return "Estimated";
+  if (containsHedge(t)) return "Estimated";
   if (t.length === 0) return "Unknown";
   return "Reported";
 }
