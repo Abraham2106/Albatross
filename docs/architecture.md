@@ -90,6 +90,18 @@ No se ha implementado sincronización P2P de observaciones. Por tanto, la garant
 
 ## Verificación disponible
 
+### Separación entre producto e instrumentación de desarrollo
+
+La visibilidad de tiempos en Captura (transcripción, procesamiento y carga de Whisper/Qwen) y la ventana **Velocidad de Whisper** pertenecen exclusivamente al ambiente de desarrollo y validación. No son funcionalidades del producto, no amplían el alcance del prototipo mínimo y no deben presentarse como herramientas para el colaborador de campo.
+
+- `Pipeline.jsx` reutiliza el riel de estados y muestra los cronómetros de diagnóstico. El indicador de progreso y la precarga secuencial sirven al flujo de captura; la exposición de métricas es instrumentación de desarrollo.
+- `VisitDraft.timings` transporta las mediciones del engine hasta la revisión. Los tiempos de carga se distinguen de los de inferencia y no intervienen en la confianza ni en los estados de los equipos.
+- `WhisperVelocidad.jsx` prueba exclusivamente la transcripción local, con audio grabado o WAV y un historial de mediciones. No extrae equipos con Qwen ni guarda observaciones de negocio.
+
+El renderer usa `import.meta.env.DEV` y la autorización expuesta por preload. Electron solo autoriza estas herramientas cuando la aplicación no está empaquetada, utiliza el servidor Vite de desarrollo esperado y no ejecuta el smoke. En producción se omiten los cronómetros y los accesos a la herramienta, se excluye la vista Whisper del bundle y se rechazan sus IPC; el hash `#whisper` abre la aplicación normal. La precarga secuencial y el riel de progreso del producto no dependen de esta autorización.
+
+### Comprobaciones
+
 Las pruebas cubren reglas de dominio, persistencia, IPC, contratos del adaptador QVAC y recorridos de dictado, revisión y aceptación con dobles de inferencia. Los comandos principales son:
 
 ```powershell

@@ -2,6 +2,16 @@
 
 Frontend para el reto de Customer Installed Base Intelligence.
 
+En el proyecto integrado, Electron conecta esta UI mediante `window.philips`; iniciá `npm run dev` desde la raíz de `project-philips` para usar la captura local con QVAC. Las instrucciones HTTP de este documento corresponden al frontend independiente.
+
+## Herramientas exclusivas de desarrollo
+
+Los cronómetros de **Transcripción** y **Procesamiento**, los tiempos de carga de modelos y la ventana **Velocidad de Whisper** son instrumentación del ambiente de desarrollo. No forman parte del producto ni del prototipo mínimo para Philips.
+
+`components/Pipeline.jsx` muestra el riel de etapas y los tiempos en Captura. `screens/WhisperVelocidad.jsx` ofrece pruebas de transcripción con micrófono o WAV, repeticiones e historial, sin ejecutar Qwen ni guardar equipos. Los tiempos no modifican la confianza ni los estados de las observaciones.
+
+Estas herramientas se habilitan únicamente en desarrollo (`npm run dev`). El build de producción oculta los tiempos y el acceso a la herramienta, excluye la vista Whisper y no activa la ruta `#whisper`. En Electron, preload y los handlers IPC también aplican la restricción. Su propósito y límites se describen en la [guía de validación](../../../docs/qvac-validation.md#instrumentación-exclusiva-de-desarrollo).
+
 **La UI no tiene datos propios.** Todo viene del backend. Sin backend corriendo, cada pantalla muestra "El servidor no responde" con un botón de reintentar.
 
 ## Arrancar
@@ -81,6 +91,6 @@ docs/contrato-api.json ← ejemplos para el backend
 
 ## Pendiente
 
-**El dictado por voz no está conectado.** El botón del micrófono muestra un aviso. Hay que decidir: la API del navegador es gratis pero usa servidores de Google y rompe el argumento de inferencia local, o Whisper vía QVAC, que es otro modelo y otra descarga. Si no da el tiempo, quitar el botón antes de la demo. Es peor mostrar algo que finge funcionar.
+El dictado de Captura está conectado a Whisper local vía QVAC en Electron y pertenece al producto; las restricciones de herramientas de desarrollo no lo deshabilitan.
 
 **Consultas en lenguaje natural sobre el dataset.** El brief lo menciona con ejemplo propio ("clientes en Brasil con resonadores de más de siete años"). No hay pantalla todavía.

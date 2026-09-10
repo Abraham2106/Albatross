@@ -31,6 +31,8 @@ La siguiente persona que abra ese hospital no ve un formulario en blanco. Ve tre
 
 Cuatro pantallas: **Hospitales** (ordenados por lo que falta), **Capturar** (dictado y revisión), **Cobertura** (región → país → ciudad → hospital) y **Panorama** (equipos por modalidad, base envejecida, sitios sin verificar).
 
+Los cronómetros de transcripción/procesamiento, los tiempos de carga y la ventana **Velocidad de Whisper** son herramientas exclusivas del ambiente de desarrollo y validación (`npm run dev`). No forman parte del producto ni del prototipo mínimo presentado a Philips y están deshabilitados en el build de producción.
+
 ---
 
 ## Lo que lo hace distinto
@@ -95,6 +97,14 @@ npm test        # 69 pruebas
 npm run typecheck
 npm run smoke   # arranca Electron, valida IPC y aislamiento, cierra solo
 ```
+
+### Herramientas de desarrollo
+
+En Capturar, los tiempos permiten distinguir la carga de modelos de la inferencia: **Transcripción** corresponde a Whisper y **Procesamiento** a la extracción con Qwen. Durante la ejecución se muestra un contador; al finalizar se presentan las mediciones del engine. Una carga de Whisper cercana a cero indica reutilización del modelo precargado al grabar, no ausencia de carga previa.
+
+**Velocidad de Whisper**, accesible desde Capturar o desde `Herramientas → Velocidad de Whisper` (`Ctrl+Shift+W`), sirve para probar un dictado o WAV, repetir transcripciones y consultar sus métricas. No ejecuta Qwen ni registra equipos en la base instalada.
+
+Estas superficies se habilitan con `npm run dev`. Con `npm run build` seguido de `npm start`, y en una aplicación empaquetada, se ocultan los cronómetros, el botón, el menú y el atajo de la herramienta; Electron bloquea también sus IPC. El riel de progreso y el dictado del producto permanecen disponibles. Detalle en [la guía de validación](docs/qvac-validation.md#instrumentación-exclusiva-de-desarrollo).
 
 ---
 
