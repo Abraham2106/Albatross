@@ -33,13 +33,14 @@ export function Error({ error, onReintentar }) {
   );
 }
 
-export function Vacio({ mensaje, accion, onAccion }) {
+export function Vacio({ mensaje, accion, onAccion, children }) {
   return (
     <div className="vacio">
       <p>{mensaje}</p>
       {accion && onAccion && (
         <button type="button" className="btn" onClick={onAccion}>{accion}</button>
       )}
+      {children}
     </div>
   );
 }

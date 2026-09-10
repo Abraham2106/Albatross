@@ -38,6 +38,9 @@ export default function App() {
   const [volverA, setVolverA] = useState('clientes');
   const [estado, setEstado] = useState('Sin conexión · en el dispositivo');
   const [tema, setTema] = useState(temaInicial);
+  const [version, setVersion] = useState(0);
+  const [guardado, setGuardado] = useState(null);
+  const [visita, setVisita] = useState(null);
 
   useEffect(() => {
     aplicarTema(tema);
@@ -46,13 +49,31 @@ export default function App() {
 
   function abrirCliente(id, desde) {
     setVolverA(desde || tab);
+    setGuardado(null);
     setClienteId(id);
   }
 
   function ir(destino) {
     setClienteId(null);
+    setGuardado(null);
+    setVisita(null);
     setTab(destino);
   }
+
+  function registrarVisita(ficha) {
+    ir('captura');
+    setVisita(ficha);
+  }
+
+  function alGuardar({ clienteId: id, antes }) {
+    setVersion((v) => v + 1);
+    setGuardado({ clienteId: id, antes });
+    setVisita(null);
+    setTab('clientes');
+    setClienteId(id);
+  }
+
+  const antes = guardado?.clienteId === clienteId ? guardado.antes : undefined;
 
   useEffect(() => {
     function onKey(e) {
@@ -113,14 +134,16 @@ export default function App() {
             <div className={'reparto' + (clienteId ? ' reparto-abierto' : '')}>
               <div className="reparto-lista">
                 <Clientes
+                  key={version}
                   seleccionado={clienteId}
                   onAbrir={(id) => abrirCliente(id, 'clientes')}
                   onCapturar={() => ir('captura')}
+                  onCargado={() => setVersion((v) => v + 1)}
                 />
               </div>
               <div className="reparto-ficha">
                 {clienteId && tab === 'clientes' ? (
-                  <Ficha id={clienteId} onVolver={() => setClienteId(null)} />
+                  <Ficha key={version} id={clienteId} antes={antes} onVisita={registrarVisita} onVolver={() => setClienteId(null)} />
                 ) : (
                   <div className="vacio vacio-ficha">
                     <p>Elegí un hospital</p>
@@ -133,22 +156,23 @@ export default function App() {
 
           <div className={'vista' + (tab === 'captura' ? ' vista-on' : '')}>
             <Captura
+              visita={visita}
               onEstado={setEstado}
-              onListo={() => setTab('clientes')}
+              onListo={alGuardar}
             />
           </div>
 
           <div className={'vista' + (tab === 'mapa' && !clienteId ? ' vista-on' : '')}>
-            <Mapa onAbrirCliente={(id) => abrirCliente(id, 'mapa')} />
+            <Mapa key={version} onAbrirCliente={(id) => abrirCliente(id, 'mapa')} />
           </div>
 
           <div className={'vista' + (tab === 'resumen' ? ' vista-on' : '')}>
-            <ResumenPantalla />
+            <ResumenPantalla key={version} />
           </div>
 
           {fichaDesdeMapa && (
             <div className="vista vista-on">
-              <Ficha id={clienteId} onVolver={() => { setClienteId(null); setTab(volverA); }} />
+              <Ficha key={version} id={clienteId} onVisita={registrarVisita} onVolver={() => { setClienteId(null); setTab(volverA); }} />
             </div>
           )}
         </main>

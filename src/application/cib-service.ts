@@ -9,6 +9,7 @@ export class CibService {
   clientes() { return this.visits.list().sites.map(site => toCliente(site, this.now())); }
   cliente(id: string) { return toFicha(this.visits.getProfile(id).site, this.now()); }
   geo() { return toGeo(this.visits.list().sites, this.now()); }
+  cargarEjemplo() { return { cargados: this.visits.loadSample() }; }
   resumen(pais?: string) { return toResumen(this.visits.list().sites, this.now(), pais); }
   async extraer(input: { texto?: string; audio?: TranscriptionRequest }, options: OperationOptions = {}) {
     return toObservacion(await this.visits.processFree({ transcript: input.texto, audio: input.audio }, options));

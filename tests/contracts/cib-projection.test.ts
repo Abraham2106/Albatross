@@ -48,6 +48,9 @@ describe('CIB contract projection', () => {
     const obs = toObservacion(value);
     expect(obs.items).toHaveLength(2);
     expect(obs.items[0].resumen).toContain('CT');
+    expect(obs.items.map(i => i.evidencia)).toEqual(['dos CT', 'cuatro MR']);
+    expect(obs).toMatchObject({ ciudad: 'San José', pais: 'Costa Rica', confianza: null });
+    expect(toObservacion(draft({ site: siteWithCt(), baseRevision: 1 })).confianza).toBe(toCliente(siteWithCt(), now).confianza);
     const kept = applyRespuestas(value, { [itemId('d1', 0)]: 'si', [itemId('d1', 1)]: 'no' });
     expect(kept).toHaveLength(1);
     expect(kept[0].modality).toBe('CT');

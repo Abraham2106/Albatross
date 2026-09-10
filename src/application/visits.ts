@@ -1,4 +1,4 @@
-import { createSite, mergeAll, explainCertainty, rankMissingFields } from '../domain';
+import { buildSeedSites, createSite, mergeAll, explainCertainty, rankMissingFields } from '../domain';
 import type { Candidate, Site } from '../domain/types';
 import { InferenceError, type InferenceEngine, type OperationOptions, type ObservationCandidate, type TranscriptionRequest, type InferenceProvenance, type InferenceResult, type ExtractionData } from './ports/inference-engine';
 import type { HospitalInput, VisitDraft, VisitRepository } from './ports/visit-repository';
@@ -37,6 +37,7 @@ export class VisitService {
   constructor(private readonly engine: InferenceEngine, private readonly repository: VisitRepository, private readonly newId: () => string, private readonly now = () => new Date().toISOString()) {}
   list() { return { sites: this.repository.listSites(), drafts: this.repository.listDrafts() }; }
     verifyIntegrity() { return this.repository.verifyIntegrity(); }
+  loadSample() { return this.repository.seed(buildSeedSites()); }
   getProfile(id: string) {
     const entry = this.repository.getSite(text(id, 'Hospital'));
     if (!entry) invalid('Hospital no encontrado.');

@@ -315,6 +315,20 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .conf-fila { display: flex; align-items: baseline; gap: 8px; }
 .conf-num { font-size: 26px; font-weight: 600; }
 .conf-etq { font-size: 12px; color: var(--tinta-3); }
+.conf-delta { font-size: 12px; font-weight: 600; }
+.guardado-aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 22px;
+  background: var(--confirmado-bg);
+  color: var(--confirmado);
+  font-size: 13px;
+}
+.guardado-aviso svg { width: 15px; height: 15px; flex-shrink: 0; }
+.equipo-lado { display: flex; align-items: center; gap: 8px; }
+.equipo-hoy { font-size: 11px; color: var(--acento); white-space: nowrap; }
 
 .barra {
   height: 5px;
@@ -467,6 +481,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   color: var(--tinta-2);
   margin: 0 0 8px;
 }
+.visita-pendientes { margin-bottom: 18px; }
+.captura-guia .visita-pendientes h2 { color: var(--acento); }
+.ficha-visita { margin-top: 14px; }
 .guia-intro {
   margin: 0 0 12px;
   font-size: 13px;
@@ -693,6 +710,20 @@ textarea:disabled { opacity: 0.7; }
   background: var(--panel);
 }
 .tarjeta p { margin: 0 0 10px; font-size: 14px; }
+.tarjeta .evidencia { margin-top: -6px; font-size: 12px; font-style: italic; color: var(--tinta-3); }
+.destino { margin-bottom: 18px; }
+.destino p { margin: 0; }
+.destino .destino-estado { margin-top: 4px; font-size: 12.5px; color: var(--acento); }
+.cita-dictado mark {
+  background: var(--acento-suave);
+  color: var(--tinta);
+  border-bottom: 1px solid var(--acento);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+.cita-dictado mark[data-activa='true'] { outline: 1px solid var(--acento); }
+.tarjetas-cabecera { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.enlace { background: none; border: 0; padding: 0; font-size: 13px; color: var(--acento); }
 
 .opciones { display: flex; gap: 7px; }
 .opcion {
@@ -788,6 +819,8 @@ td { padding: 10px 0; border-top: 1px solid var(--linea); }
   font-size: 14px;
 }
 .vacio .btn { margin-top: 14px; }
+.vacio .vacio-ejemplo { margin-left: 8px; }
+.vacio .vacio-nota { margin-top: 10px; }
 
 .girando {
   display: inline-block;

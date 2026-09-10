@@ -21,6 +21,13 @@ const MAPA = {
   Unknown:    { texto: 'Sin datos',   clase: 'desconocido', Icono: Guion }
 };
 
+export const MOTIVO = {
+  missing: 'Falta el dato',
+  low_confidence: 'Poco confirmado',
+  stale: 'Dato de hace más de seis meses',
+  conflict: 'Dos reportes no coinciden'
+};
+
 export function EstadoBadge({ estado }) {
   const e = MAPA[estado] || MAPA.Unknown;
   return (
@@ -42,7 +49,7 @@ export function nivel(pct) {
   return { texto: 'Baja', color: 'var(--peligro)' };
 }
 
-export function Confianza({ pct, compacto = false }) {
+export function Confianza({ pct, compacto = false, antes = null }) {
   const n = nivel(pct);
   if (compacto) {
     return (
@@ -61,6 +68,11 @@ export function Confianza({ pct, compacto = false }) {
       <div className="conf-fila">
         <span className="conf-num num" style={{ color: n.color }}>{pct}%</span>
         <span className="conf-etq">confianza {n.texto.toLowerCase()}</span>
+        {antes !== null && (
+          <span className="conf-delta" style={{ color: pct < antes ? 'var(--peligro)' : 'var(--confirmado)' }}>
+            {pct === antes ? 'sin cambio con esta visita' : `${pct > antes ? '+' : ''}${pct - antes} con esta visita`}
+          </span>
+        )}
       </div>
       <div className="barra">
         <i style={{ width: `${pct}%`, background: n.color }} />

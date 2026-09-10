@@ -53,6 +53,8 @@ export const obtenerCliente = (id) => conDesktop('cliente', [id], () => pedir(`/
 export const obtenerGeo = () => conDesktop('geo', [], () => pedir('/geo'));
 export const obtenerResumen = (pais) => conDesktop('resumen', pais ? [pais] : [], () => pedir(pais ? `/resumen?pais=${encodeURIComponent(pais)}` : '/resumen'));
 
+export const cargarEjemplo = () => conDesktop('cargarEjemplo', [], () => Promise.reject(new Error('SIN_BACKEND')));
+
 export const hayEscritorio = () => !!desktop();
 
 export const transcribir = (audio) => {

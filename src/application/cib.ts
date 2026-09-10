@@ -26,12 +26,13 @@ export interface CibResumen {
   confianzaMedia: number; sinVerificar: number; oportunidades: CibOportunidad[];
 }
 export interface CibItem {
-  id: string; resumen: string; estadoSugerido: string;
+  id: string; resumen: string; estadoSugerido: string; evidencia: string;
   campos: { modalidad: string; cantidad: number | null; marca: string | null; modelo: string | null; edad: number | null };
 }
 export interface CibObservacion {
   timings?: VisitDraft['timings'];
-  observacionId: string; clienteId: string; cliente: string; textoOriginal: string;
+  observacionId: string; clienteId: string; cliente: string; ciudad: string; pais: string; textoOriginal: string;
+  confianza: number | null;
   items: CibItem[]; conflictos: { campo: string; mensaje: string }[];
 }
 
@@ -179,10 +180,12 @@ export function toObservacion(draft: VisitDraft): CibObservacion {
     }),
   ];
   return {
-    observacionId: draft.id, clienteId: draft.site.id, cliente: draft.site.name, textoOriginal: draft.transcript,
+    observacionId: draft.id, clienteId: draft.site.id, cliente: draft.site.name, ciudad: draft.site.city, pais: draft.site.country,
+    textoOriginal: draft.transcript,
+    confianza: draft.baseRevision ? explainCertainty(draft.site, draft.createdAt).percent : null,
     timings: draft.timings,
     items: draft.extraction.candidates.map((c, i) => ({
-      id: itemId(draft.id, i), resumen: summarizeCandidate(c), estadoSugerido: suggestedStatus(c),
+      id: itemId(draft.id, i), resumen: summarizeCandidate(c), estadoSugerido: suggestedStatus(c), evidencia: c.evidence,
       campos: { modalidad: c.modality, cantidad: c.quantity, marca: c.brand, modelo: c.model, edad: c.ageYears },
     })),
     conflictos,

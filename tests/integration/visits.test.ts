@@ -54,6 +54,19 @@ describe('dictation, human review and local persistence', () => {
     expect(repo.getSite(draft.site.id)?.revision).toBe(1);
     expect(service.list().drafts).toHaveLength(0);
   });
+  it('loads the sponsor sample only into an empty base, outside the integrity chain', async () => {
+    const { repo, service } = setup();
+    expect(service.loadSample()).toBe(13);
+    expect(service.loadSample()).toBe(0);
+    expect(service.list().sites).toHaveLength(13);
+    expect(service.verifyIntegrity()).toMatchObject({ ok: true, entries: 0 });
+    const park = { id: 'hospital-democare-park', name: 'Hospital DemoCare Park', country: 'Argentina', city: 'Buenos Aires' };
+    service.accept(review(await service.process({ hospital: park, transcript: TEST_TRANSCRIPT })));
+    expect(repo.getSite(park.id)?.revision).toBe(2);
+    const other = setup();
+    other.service.accept(review(await other.service.process({ hospital, transcript: TEST_TRANSCRIPT })));
+    expect(other.service.loadSample()).toBe(0);
+  });
   it('keeps data after reopening SQLite', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'philips-test-')); resources.push(() => rmSync(dir, { recursive: true, force: true }));
     const file = join(dir, 'visits.sqlite');

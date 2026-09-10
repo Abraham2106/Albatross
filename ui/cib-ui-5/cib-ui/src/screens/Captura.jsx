@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { extraer, confirmar, descargarModelos, estadoModelos, onProgreso, cancelar, hayEscritorio, abrirVentanaWhisper, precargarModelos } from '../api/client.js';
 import Pipeline from '../components/Pipeline.jsx';
+import { marcarCitas } from '../components/citas.mjs';
+import { MOTIVO } from '../components/Estado.jsx';
 import { DEVELOPMENT_TOOLS } from '../../../../../src/ui/development-tools.ts';
 import { Micro, SinRed, Copia } from '../components/Iconos.jsx';
 import { startRecording } from '../../../../../src/ui/recorder.ts';
@@ -10,7 +12,7 @@ function percentFrom(message) {
   return match ? Number(match[1]) : null;
 }
 
-export default function Captura({ onListo, onEstado }) {
+export default function Captura({ visita, onListo, onEstado }) {
   const [texto, setTexto] = useState('');
   const [audio, setAudio] = useState(null);
   const [grabando, setGrabando] = useState(false);
@@ -18,6 +20,7 @@ export default function Captura({ onListo, onEstado }) {
   const [cargando, setCargando] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [respuestas, setRespuestas] = useState({});
+  const [activa, setActiva] = useState(null);
   const [error, setError] = useState('');
   const [guardado, setGuardado] = useState(false);
   const [pack, setPack] = useState(undefined);
@@ -67,6 +70,10 @@ export default function Captura({ onListo, onEstado }) {
     else if (pack && !pack.ready) onEstado?.('Faltan modelos · descargalos en Capturar');
     else onEstado?.('Sin conexión · en el dispositivo');
   }, [bajando, cargando, pack, progreso, onEstado]);
+
+  useEffect(() => {
+    if (visita) setTexto((t) => (t.trim() ? t : `Estuve en ${visita.nombre}, ${visita.ciudad}. `));
+  }, [visita]);
 
   useEffect(() => {
     if (!grabando) return;
@@ -181,15 +188,20 @@ export default function Captura({ onListo, onEstado }) {
   }
 
   async function guardar() {
-    await confirmar(resultado.observacionId, respuestas);
+    setError('');
     setGuardado(true);
-    setTexto('');
-    setAudio(null);
-    setTimeout(() => {
+    try {
+      const { clienteId } = await confirmar(resultado.observacionId, respuestas);
+      const antes = resultado.confianza;
+      setTexto('');
+      setAudio(null);
       setResultado(null);
+      onListo?.({ clienteId, antes });
+    } catch (e) {
+      setError('No se pudo guardar. ' + e.message);
+    } finally {
       setGuardado(false);
-      onListo?.();
-    }, 900);
+    }
   }
 
   const faltan = resultado && resultado.items.some((i) => !respuestas[i.id]);
@@ -197,7 +209,8 @@ export default function Captura({ onListo, onEstado }) {
   return (
     <div className="pantalla">
       <div className="top">
-        <h1 className="titulo">Nueva observación</h1>
+        {visita && <p className="ruta">{visita.pais} › {visita.ciudad}</p>}
+        <h1 className="titulo">{visita ? `Visita a ${visita.nombre}` : 'Nueva observación'}</h1>
         <p className="offline"><SinRed /> Sin conexión · procesando en el dispositivo</p>
       </div>
 
@@ -271,6 +284,17 @@ export default function Captura({ onListo, onEstado }) {
             </div>
 
             <aside className="captura-guia">
+              {visita?.pendientes.length > 0 && (
+                <div className="visita-pendientes">
+                  <h2>En esta visita, averiguá</h2>
+                  {visita.pendientes.map((p) => (
+                    <div key={p.id} className="pendiente">
+                      <p>{p.texto}</p>
+                      <span>{MOTIVO[p.motivo] ?? p.motivo}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {pack && (
                 <div className="pack-modelos">
                   {pack.ready ? (
@@ -315,8 +339,23 @@ export default function Captura({ onListo, onEstado }) {
         {resultado && (
           <div className="captura-revision">
             <aside className="captura-fuente">
+              <h2>Hospital</h2>
+              <div className="tarjeta destino">
+                <p className="fila-t">{resultado.cliente}</p>
+                <p className="fila-s">{resultado.pais} › {resultado.ciudad}</p>
+                <p className="destino-estado">
+                  {resultado.confianza === null ? 'Hospital nuevo · se crea al guardar' : `Ya registrado · confianza ${resultado.confianza}%`}
+                </p>
+              </div>
               <h2>Dictado</h2>
-              <p className="cita-dictado">“{resultado.textoOriginal}”</p>
+              <p className="cita-dictado">
+                “{marcarCitas(resultado.textoOriginal, resultado.items.map((i) => i.evidencia)).map((parte, n) => (
+                  parte.citas.length
+                    ? <mark key={n} data-activa={parte.citas.includes(activa)}>{parte.texto}</mark>
+                    : parte.texto
+                ))}”
+              </p>
+              <p className="fila-s">Lo resaltado es lo que respalda cada tarjeta.</p>
               {resultado.conflictos.map((c, i) => (
                 <div key={i} className="aviso">
                   <Copia style={{ width: 14, height: 14, verticalAlign: -2, marginRight: 5 }} />
@@ -325,10 +364,23 @@ export default function Captura({ onListo, onEstado }) {
               ))}
             </aside>
             <div className="captura-tarjetas">
-              <h2>Confirmá lo que entendí</h2>
-              {resultado.items.map((item) => (
-                <div key={item.id} className="tarjeta">
+              <div className="tarjetas-cabecera">
+                <h2>Confirmá lo que entendí</h2>
+                <button type="button" className="enlace" onClick={() => setRespuestas(Object.fromEntries(resultado.items.map((i) => [i.id, 'si'])))}>
+                  Sí a todo
+                </button>
+              </div>
+              {resultado.items.map((item, n) => (
+                <div
+                  key={item.id}
+                  className="tarjeta"
+                  onMouseEnter={() => setActiva(n)}
+                  onMouseLeave={() => setActiva(null)}
+                  onFocus={() => setActiva(n)}
+                  onBlur={() => setActiva(null)}
+                >
                   <p>{item.resumen}</p>
+                  <p className="evidencia">“{item.evidencia}”</p>
                   <div className="opciones" role="group" aria-label={item.resumen}>
                     {['si', 'no', 'nose'].map((op) => (
                       <button
@@ -348,9 +400,10 @@ export default function Captura({ onListo, onEstado }) {
               ))}
               <div className="acciones">
                 <button type="button" data-testid="cib-guardar" className="btn" onClick={guardar} disabled={faltan || guardado}>
-                  {guardado ? 'Guardado' : faltan ? 'Respondé las tarjetas' : 'Guardar observación'}
+                  {guardado ? 'Guardando…' : faltan ? 'Respondé las tarjetas' : 'Guardar observación'}
                 </button>
               </div>
+              {error && <p className="error" role="alert">{error}</p>}
             </div>
           </div>
         )}

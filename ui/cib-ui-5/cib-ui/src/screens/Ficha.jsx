@@ -1,6 +1,7 @@
 import { obtenerCliente } from '../api/client.js';
-import { EstadoBadge, Confianza } from '../components/Estado.jsx';
+import { EstadoBadge, Confianza, MOTIVO } from '../components/Estado.jsx';
 import { Cargando, Error, usePedido } from '../components/Estados.jsx';
+import { Check } from '../components/Iconos.jsx';
 
 /** "2 tomógrafos · Medix · 8 años" armado solo con lo que se sabe. */
 function detalle(e) {
@@ -13,19 +14,32 @@ function detalle(e) {
   return partes.join(' · ');
 }
 
-export default function Ficha({ id, onVolver }) {
+export default function Ficha({ id, onVolver, onVisita, antes }) {
   const { datos: c, error, reintentar } = usePedido(() => obtenerCliente(id), [id]);
 
   if (error) return <Error error={error} onReintentar={reintentar} />;
   if (!c) return <Cargando que="Cargando ficha" />;
 
+  const hoy = new Date().toISOString().slice(0, 10);
+
   return (
     <div className="pantalla">
+      {antes !== undefined && (
+        <p className="guardado-aviso" role="status">
+          <Check />
+          {antes === null
+            ? `Hospital nuevo guardado con confianza ${c.confianza}%.`
+            : `Observación guardada. La confianza pasó de ${antes}% a ${c.confianza}%.`}
+        </p>
+      )}
       <div className="top">
         <button type="button" className="volver" onClick={onVolver}>Hospitales</button>
         <p className="ruta">{c.pais} › {c.ciudad}</p>
         <h1 className="titulo ficha-titulo">{c.nombre}</h1>
-        <Confianza pct={c.confianza} />
+        <Confianza pct={c.confianza} antes={antes ?? null} />
+        <button type="button" data-testid="cib-visita" className="btn btn-sec ficha-visita" onClick={() => onVisita(c)}>
+          Registrar visita
+        </button>
       </div>
 
       <div className="cuerpo">
@@ -35,7 +49,7 @@ export default function Ficha({ id, onVolver }) {
             {c.pendientes.map((p) => (
               <div key={p.id} className="pendiente">
                 <p>{p.texto}</p>
-                <span>{p.motivo}</span>
+                <span>{MOTIVO[p.motivo] ?? p.motivo}</span>
               </div>
             ))}
           </div>
@@ -53,7 +67,10 @@ export default function Ficha({ id, onVolver }) {
                 <p className="fila-s">{detalle(e)}</p>
                 {e.nota && <p className="cita">{e.nota}</p>}
               </div>
-              <EstadoBadge estado={e.estado} />
+              <span className="equipo-lado">
+                {e.fecha === hoy && <span className="equipo-hoy">actualizado hoy</span>}
+                <EstadoBadge estado={e.estado} />
+              </span>
             </div>
           ))}
         </div>

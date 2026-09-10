@@ -33,6 +33,7 @@ export interface DesktopApi {
   cliente(id: string): Promise<Result<ReturnType<CibService['cliente']>>>;
   geo(): Promise<Result<ReturnType<CibService['geo']>>>;
   resumen(pais?: string): Promise<Result<ReturnType<CibService['resumen']>>>;
+  cargarEjemplo(): Promise<Result<ReturnType<CibService['cargarEjemplo']>>>;
   extraer(requestId: string, input: { texto?: string; audio?: TranscriptionRequest }): Promise<Result<Awaited<ReturnType<CibService['extraer']>>>>;
   transcribir?(requestId: string, input: TranscriptionRequest): Promise<Result<WhisperSpeedResult>>;
   openWav?(): Promise<Result<OpenWavResult | null>>;

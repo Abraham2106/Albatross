@@ -75,6 +75,16 @@ export class SqliteVisitRepository implements VisitRepository {
       this.db.exec('COMMIT'); return visit.site;
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
+  seed(sites: readonly Site[]): number {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const { n } = this.db.prepare('SELECT COUNT(*) AS n FROM sites').get() as { n: number };
+      if (n > 0) { this.db.exec('COMMIT'); return 0; }
+      const insert = this.db.prepare('INSERT INTO sites(id,revision,snapshot) VALUES(?,1,?)');
+      for (const site of sites) insert.run(site.id, JSON.stringify(site));
+      this.db.exec('COMMIT'); return sites.length;
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+  }
   /** Último eslabón de la cadena, o undefined si aún no hay observaciones. */
   private head(): { index: number; hash: string } | undefined {
     const row = this.db.prepare('SELECT chain_index, hash FROM accepted_visits WHERE chain_index >= 0 ORDER BY chain_index DESC LIMIT 1').get();

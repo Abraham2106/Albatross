@@ -20,6 +20,8 @@ export interface VisitRepository {
   getDraft(id: string): VisitDraft | undefined;
   listDrafts(): VisitDraft[];
   accept(visit: AcceptedVisit): Site;
+  /** Carga sitios iniciales solo si la base está vacía; devuelve cuántos entraron. */
+  seed(sites: readonly Site[]): number;
   /** Verifica que ninguna observación aceptada haya sido alterada después. */
   verifyIntegrity(): ChainVerdict;
   close(): void;
