@@ -7,7 +7,23 @@ export class InferenceError extends Error {
 export type InferenceProvenance =
   | { readonly execution: 'local'; readonly model: string }
   | { readonly execution: 'peer'; readonly model: string; readonly peerId: string };
-export interface InferenceResult<T> { readonly data: T; readonly provenance: InferenceProvenance }
+export interface InferenceTiming {
+  readonly loadMs: number;
+  readonly inferMs: number;
+  readonly totalMs: number;
+  readonly coldStart: boolean;
+}
+export interface InferenceBackend {
+  readonly device: 'cpu' | 'gpu';
+  readonly name: string;
+  readonly graphicsApi?: string;
+}
+export interface InferenceResult<T> {
+  readonly data: T;
+  readonly provenance: InferenceProvenance;
+  readonly timing?: InferenceTiming;
+  readonly backend?: InferenceBackend;
+}
 export interface OperationOptions { readonly signal?: AbortSignal }
 export interface TranscriptionRequest { readonly audio: Uint8Array; readonly mimeType: string }
 export interface ExtractionRequest { readonly hospitalId: string; readonly transcript: string }

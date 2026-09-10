@@ -18,6 +18,7 @@ const api: DesktopApi = {
   confirmar: input => ipcRenderer.invoke('philips:confirmar', input),
   models: () => ipcRenderer.invoke('philips:models'),
   downloadModels: requestId => ipcRenderer.invoke('philips:download-models', { requestId }),
+  preloadModels: (requestId, capabilities) => ipcRenderer.invoke('philips:preload-models', { requestId, capabilities }),
   onProgress: listener => {
     const handler = (_event: Electron.IpcRendererEvent, value: { requestId: string; message: string }) => listener(value);
     ipcRenderer.on('philips:progress', handler);

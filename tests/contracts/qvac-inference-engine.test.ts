@@ -14,12 +14,56 @@ function clientMock() {
     load: vi.fn((kind: string) => resolved(kind + '-model', 'load-' + kind)),
     complete: vi.fn((_id: string, _history: { role: string; content: string }[], _schema: Record<string, unknown>) => resolved(JSON.stringify(payload()))),
     transcribe: vi.fn((_id: string, _pcm: Uint8Array) => resolved(transcript)),
-    cancel: vi.fn(async () => {}), unload: vi.fn(async () => {}), close: vi.fn(async () => {}),
+    cancel: vi.fn(async () => {}), unload: vi.fn(async (_id: string) => {}), close: vi.fn(async () => {}),
   } satisfies QvacClient;
 }
 afterEach(() => vi.useRealTimers());
 
 describe('QVAC adapter without a real runtime or models', () => {
+  it('unloads Qwen before warming Whisper, then swaps back without overlapping models', async () => {
+    const client = clientMock();
+    const resident = new Set<string>();
+    client.load.mockImplementation(kind => {
+      expect(resident.size).toBe(0);
+      resident.add(kind + '-model');
+      return resolved(kind + '-model');
+    });
+    client.unload.mockImplementation(async (id: string) => { resident.delete(id); });
+    const engine = new QvacInferenceEngine({ enabled: true, clientFactory: async () => client });
+    await engine.extractObservations({ hospitalId: 'a', transcript });
+    expect(await engine.warm(['stt'])).toEqual({ stt: true, llm: false });
+    expect(client.unload).toHaveBeenCalledWith('llm-model');
+    await engine.warm(['stt']);
+    expect(client.load).toHaveBeenCalledTimes(2);
+    const run = await engine.transcribe({ audio: pcmToWav(new Float32Array(16000), 16000), mimeType: 'audio/wav' });
+    expect(run.timing?.coldStart).toBe(false);
+    await engine.extractObservations({ hospitalId: 'a', transcript });
+    expect(client.unload).toHaveBeenCalledWith('stt-model');
+    expect(engine.loaded()).toEqual({ stt: false, llm: true });
+    await engine.close();
+  });
+  it('waits for in-flight warm before transcription without loading twice', async () => {
+    const client = clientMock();
+    let release!: (id: string) => void;
+    client.load.mockImplementation(() => ({ requestId: 'warm', final: new Promise<string>(resolve => { release = resolve; }) }));
+    const engine = new QvacInferenceEngine({ enabled: true, clientFactory: async () => client });
+    const warming = engine.warm(['stt']);
+    const run = engine.transcribe({ audio: pcmToWav(new Float32Array(16000), 16000), mimeType: 'audio/wav' });
+    await vi.waitFor(() => expect(client.load).toHaveBeenCalledOnce());
+    expect(client.transcribe).not.toHaveBeenCalled();
+    release('stt-model');
+    await warming;
+    expect((await run).timing?.coldStart).toBe(false);
+    expect(client.load).toHaveBeenCalledOnce();
+    await engine.close();
+  });
+  it('rejects a joint preload without allocating either model', async () => {
+    const client = clientMock();
+    const engine = new QvacInferenceEngine({ enabled: true, clientFactory: async () => client });
+    await expect(engine.warm(['stt', 'llm'])).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+    expect(client.load).not.toHaveBeenCalled();
+    await engine.close();
+  });
   it('never constructs the SDK when models are disabled', async () => {
     const factory = vi.fn(async () => clientMock());
     const engine = new QvacInferenceEngine({ clientFactory: factory });
@@ -43,6 +87,43 @@ describe('QVAC adapter without a real runtime or models', () => {
     const audio = pcmToWav(new Float32Array([0, .1, -.1, .3]), 16000);
     await engine.transcribe({ audio, mimeType: 'audio/wav' });
     expect(client.transcribe.mock.calls[0]?.[1]).toEqual(wavToPcm(audio));
+    await engine.close();
+  });
+  it('splits model load from transcription time and marks a warm second run', async () => {
+    const client = clientMock();
+    client.load.mockImplementation((kind: string) => ({
+      requestId: 'load-' + kind,
+      final: new Promise<string>(resolve => setTimeout(() => resolve(kind + '-model'), 25)),
+    }));
+    client.transcribe.mockImplementation(() => ({
+      requestId: 'stt',
+      final: new Promise<string>(resolve => setTimeout(() => resolve(transcript), 20)),
+    }));
+    const engine = new QvacInferenceEngine({ enabled: true, clientFactory: async () => client });
+    const audio = pcmToWav(new Float32Array(16000), 16000);
+    const first = await engine.transcribe({ audio, mimeType: 'audio/wav' });
+    const second = await engine.transcribe({ audio, mimeType: 'audio/wav' });
+    expect(first.timing?.coldStart).toBe(true);
+    expect(first.timing!.loadMs).toBeGreaterThanOrEqual(20);
+    expect(first.timing!.inferMs).toBeGreaterThanOrEqual(15);
+    expect(second.timing?.coldStart).toBe(false);
+    expect(second.timing!.loadMs).toBeLessThan(first.timing!.loadMs);
+    await engine.close();
+  });
+  it('keeps Whisper loaded after warm so the next transcription is not a cold start', async () => {
+    const client = clientMock();
+    client.load.mockImplementation((kind: string) => ({
+      requestId: 'load-' + kind,
+      final: new Promise<string>(resolve => setTimeout(() => resolve(kind + '-model'), 20)),
+    }));
+    const engine = new QvacInferenceEngine({ enabled: true, clientFactory: async () => client });
+    const audio = pcmToWav(new Float32Array(16000), 16000);
+    expect(await engine.warm(['stt'])).toEqual({ stt: true, llm: false });
+    const run = await engine.transcribe({ audio, mimeType: 'audio/wav' });
+    expect(client.load).toHaveBeenCalledTimes(1);
+    expect(run.timing?.coldStart).toBe(false);
+    await engine.transcribe({ audio, mimeType: 'audio/wav' });
+    expect(client.load).toHaveBeenCalledTimes(1);
     await engine.close();
   });
   it('rejects output that is not JSON', async () => {

@@ -1,91 +1,185 @@
 import './hide-bare-console.cjs';
-import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, type IpcMainInvokeEvent } from 'electron';
+import { pinNvidiaGpu } from '../src/adapters/inference/qvac/prefer-nvidia';
 import * as path from 'node:path';
 import { NetworkAudit } from '../src/application/network-audit';
 import * as fs from 'node:fs';
 import { createRuntime } from '../src/bootstrap/desktop';
 import { InferenceError } from '../src/application/ports/inference-engine';
 import { text, record, invalid } from '../src/application/validation';
+import { asAudioBytes } from '../src/application/audio';
 import type { ProcessVisitInput, ReviewInput } from '../src/application/visits';
 import type { Result } from '../src/application/desktop-api';
+import type { TranscriptionRequest } from '../src/application/ports/inference-engine';
 
 const smokeTest = process.argv.includes('--smoke-test');
 if (smokeTest) {
   const smokeData = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'philips-smoke-'));
   app.setPath('userData', smokeData);
   app.disableHardwareAcceleration();
+} else {
+  pinNvidiaGpu();
+  app.commandLine.appendSwitch('force_high_performance_gpu');
 }
 const devUrl = process.env.VITE_DEV_SERVER_URL;
 const networkAudit = new NetworkAudit(devUrl ? new URL(devUrl).origin : undefined);
 let mainWindow: BrowserWindow | null = null;
 let runtime: ReturnType<typeof createRuntime> | undefined;
-let active: { id: string; controller: AbortController } | undefined;
+let active: { id: string; controller: AbortController; sender: Electron.WebContents } | undefined;
 let quitting = false;
+const preloadSenders = new Map<string, Electron.WebContents>();
 const filePath = path.join(__dirname, '../dist/index.html');
-const trustedUrl = (url: string) => devUrl ? url === devUrl || url === devUrl + '/' : url === require('node:url').pathToFileURL(filePath).href;
-
-function trusted(event: IpcMainInvokeEvent) {
-  if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame || !trustedUrl(event.senderFrame.url)) invalid('Origen no autorizado.');
+function trustedUrl(url: string) {
+  const expected = devUrl || require('node:url').pathToFileURL(filePath).href;
+  try {
+    const actual = new URL(url);
+    const allow = new URL(expected);
+    return actual.protocol === allow.protocol && actual.host === allow.host && actual.pathname === allow.pathname;
+  } catch {
+    return url === expected || url === expected + '/';
+  }
 }
-function handle(channel: string, action: (value: unknown) => unknown) {
+function liveContents(window: BrowserWindow | null) {
+  try {
+    if (!window || window.isDestroyed()) return null;
+    const contents = window.webContents;
+    return contents.isDestroyed() ? null : contents;
+  } catch {
+    return null;
+  }
+}
+function appContents(contents: Electron.WebContents | null) {
+  if (!contents) return false;
+  try {
+    if (contents.isDestroyed()) return false;
+    const main = liveContents(mainWindow);
+    return main !== null && contents === main;
+  } catch {
+    return false;
+  }
+}
+function sendProgress(sender: Electron.WebContents, requestId: string, message: string) {
+  try {
+    if (!sender.isDestroyed()) sender.send('philips:progress', { requestId, message });
+  } catch { /* the renderer closed while QVAC was still flushing progress */ }
+}
+function abortIfSender(window: BrowserWindow) {
+  try {
+    const contents = liveContents(window);
+    if (active && contents && active.sender === contents) active.controller.abort();
+  } catch { active?.controller.abort(); }
+}
+function trusted(event: IpcMainInvokeEvent) {
+  if (!appContents(event.sender) || event.senderFrame !== event.sender.mainFrame || !trustedUrl(event.senderFrame.url)) invalid('Origen no autorizado.');
+}
+function handle(channel: string, action: (value: unknown, event: IpcMainInvokeEvent) => unknown) {
   ipcMain.handle('philips:' + channel, async (event, value): Promise<Result<unknown>> => {
-    try { trusted(event); return { ok: true, data: await action(value) }; }
+    try { trusted(event); return { ok: true, data: await action(value, event) }; }
     catch (error) { return { ok: false, error: error instanceof InferenceError ? { code: error.code, message: error.message } : { code: 'UNAVAILABLE', message: 'No se pudo completar la operación local. Inténtalo de nuevo.' } }; }
   });
 }
-async function operation(value: unknown, run: (input: Record<string, unknown>, signal: AbortSignal) => Promise<unknown>) {
+async function operation(event: IpcMainInvokeEvent, value: unknown, run: (input: Record<string, unknown>, signal: AbortSignal) => Promise<unknown>) {
   if (active) throw new InferenceError('UNAVAILABLE', 'Ya hay una operación en curso.');
   const input = record(value);
   const id = text(input.requestId, 'Solicitud', 100);
   const controller = new AbortController();
-  active = { id, controller };
+  active = { id, controller, sender: event.sender };
   try { return await run(input, controller.signal); } finally { active = undefined; }
+}
+function audioRequest(value: Record<string, unknown>): TranscriptionRequest {
+  return { audio: asAudioBytes(value.audio), mimeType: text(value.mimeType, 'Tipo de audio', 40) };
 }
 function setupHandlers() {
   handle('status', () => runtime!.status);
   handle('list', () => runtime!.service.list());
   handle('profile', id => runtime!.service.getProfile(text(id, 'Hospital')));
-  handle('process', value => operation(value, (v, signal) => runtime!.service.process(v.input as ProcessVisitInput, { signal })));
+  handle('process', (value, event) => operation(event, value, (v, signal) => runtime!.service.process(v.input as ProcessVisitInput, { signal })));
   handle('accept', value => runtime!.service.accept(value as ReviewInput));
   handle('verify-integrity', () => runtime!.service.verifyIntegrity());
   handle('network-audit', () => networkAudit.report());
-  handle('follow-ups', value => operation(value, (v, signal) => runtime!.service.followUps(text(v.hospitalId, 'Hospital'), { signal })));
+  handle('follow-ups', (value, event) => operation(event, value, (v, signal) => runtime!.service.followUps(text(v.hospitalId, 'Hospital'), { signal })));
   handle('cancel', value => { const id = text(value, 'Solicitud'); if (active?.id === id) active.controller.abort(); });
   handle('clientes', () => runtime!.cib.clientes());
   handle('cliente', id => runtime!.cib.cliente(text(id, 'Hospital')));
   handle('geo', () => runtime!.cib.geo());
   handle('resumen', value => runtime!.cib.resumen(typeof value === 'string' && value.trim() ? value : undefined));
-  handle('extraer', value => operation(value, (v, signal) => runtime!.cib.extraer({
+  handle('extraer', (value, event) => operation(event, value, (v, signal) => runtime!.cib.extraer({
     texto: typeof v.texto === 'string' ? v.texto : undefined,
-    audio: v.audio && typeof v.audio === 'object' ? v.audio as { audio: Uint8Array; mimeType: string } : undefined,
+    audio: v.audio && typeof v.audio === 'object' ? audioRequest(v.audio as Record<string, unknown>) : undefined,
   }, { signal })));
   handle('confirmar', value => runtime!.cib.confirmar(value));
   handle('models', () => runtime!.models());
-  handle('download-models', value => operation(value, (_input, signal) => runtime!.downloadModels(signal)));
+  handle('download-models', (value, event) => operation(event, value, (_input, signal) => runtime!.downloadModels(signal)));
+  handle('preload-models', async (value, event) => {
+    const v = record(value);
+    const id = text(v.requestId, 'Solicitud', 100);
+    const raw = Array.isArray(v.capabilities) ? v.capabilities : [];
+    const capabilities = raw.filter((c): c is 'stt' | 'llm' => c === 'stt' || c === 'llm');
+    preloadSenders.set(id, event.sender);
+    try { return await runtime!.warm(capabilities.length ? capabilities : ['stt']); }
+    finally { preloadSenders.delete(id); }
+  });
 }
-async function createWindow() {
-  const window = new BrowserWindow({
-    width: 1240, height: 880, show: !smokeTest,
-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true },
-  });
-  mainWindow = window;
-    window.webContents.session.webRequest.onBeforeRequest((details, callback) => {
-    callback({ cancel: networkAudit.record(details.url) === 'blocked' });
-  });
-  window.on('closed', () => { active?.controller.abort(); mainWindow = null; });
+function boundsPath(name = 'window-bounds.json') {
+  return path.join(app.getPath('userData'), name);
+}
+function hardenContents(window: BrowserWindow) {
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', event => event.preventDefault());
-  window.webContents.on('render-process-gone', () => active?.controller.abort());
+  window.webContents.on('render-process-gone', () => abortIfSender(window));
+}
+function allowMicrophone(window: BrowserWindow) {
   window.webContents.session.setPermissionCheckHandler((contents, permission, origin, details) =>
-    contents === window.webContents && permission === 'media' && details.mediaType === 'audio' &&
+    appContents(contents) && permission === 'media' && details.mediaType === 'audio' &&
     (devUrl ? origin === new URL(devUrl).origin : origin === 'file://'));
-  window.webContents.session.setPermissionRequestHandler((contents, permission, callback, details) =>
-    callback(contents === window.webContents && permission === 'media' && trustedUrl(contents.getURL()) &&
-      'mediaTypes' in details && details.mediaTypes?.length === 1 && details.mediaTypes[0] === 'audio'));
+  window.webContents.session.setPermissionRequestHandler((contents, permission, callback, details) => {
+    try {
+      callback(appContents(contents) && permission === 'media' && trustedUrl(contents.getURL()) &&
+        'mediaTypes' in details && details.mediaTypes?.length === 1 && details.mediaTypes[0] === 'audio');
+    } catch { callback(false); }
+  });
+}
+async function loadRenderer(window: BrowserWindow) {
   if (devUrl) {
     if (devUrl !== 'http://127.0.0.1:5187') throw new Error('Unexpected development URL');
     await window.loadURL(devUrl);
   } else await window.loadFile(filePath);
+}
+function restoreBounds() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(boundsPath(), 'utf8')) as { x: number; y: number; width: number; height: number };
+    const area = screen.getDisplayMatching(raw).workArea;
+    if (raw.width >= 430 && raw.height >= 640
+      && raw.x < area.x + area.width - 80
+      && raw.y < area.y + area.height - 80
+      && raw.x + raw.width > area.x + 80) return raw;
+  } catch { /* primera vez */ }
+  return { width: 1240, height: 880 };
+}
+
+async function createWindow() {
+  const window = new BrowserWindow({
+    ...restoreBounds(),
+    minWidth: 430, minHeight: 640, show: !smokeTest,
+    backgroundColor: '#0c1114',
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  mainWindow = window;
+  window.webContents.session.webRequest.onBeforeRequest((details, callback) => {
+    callback({ cancel: networkAudit.record(details.url) === 'blocked' });
+  });
+  window.on('close', () => abortIfSender(window));
+  window.on('closed', () => { mainWindow = null; });
+  const persist = () => {
+    if (window.isDestroyed() || window.isMinimized()) return;
+    try { fs.writeFileSync(boundsPath(), JSON.stringify(window.getBounds())); } catch { /* ignore */ }
+  };
+  window.on('resized', persist);
+  window.on('moved', persist);
+  hardenContents(window);
+  allowMicrophone(window);
+  await loadRenderer(window);
+  if (window.isDestroyed()) return;
   if (!smokeTest) {
     window.show();
     window.focus();
@@ -125,12 +219,19 @@ app.on('before-quit', event => {
   if (quitting) return;
   event.preventDefault(); quitting = true;
   active?.controller.abort();
+  preloadSenders.clear();
   void runtime?.close().catch(error => console.error('Shutdown:', error.message)).finally(() => { if (timeout) clearTimeout(timeout); app.quit(); });
 });
 app.whenReady().then(async () => {
   runtime = createRuntime(smokeTest ? ':memory:' : path.join(app.getPath('userData'), 'philips-visits.sqlite'),
     smokeTest ? {} : process.env,
-    message => { if (active) mainWindow?.webContents.send('philips:progress', { requestId: active.id, message }); },
+    message => {
+      if (quitting) return;
+      if (active) sendProgress(active.sender, active.id, message);
+      for (const [requestId, sender] of preloadSenders) {
+        if (sender !== active?.sender) sendProgress(sender, requestId, message);
+      }
+    },
     !smokeTest);
   setupHandlers(); await createWindow();
 }).catch(error => { console.error(error); app.exit(1); });

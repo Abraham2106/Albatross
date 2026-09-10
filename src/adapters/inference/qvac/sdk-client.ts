@@ -1,6 +1,10 @@
-import { existsSync } from 'node:fs';
+import { existsSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { randomUUID } from 'node:crypto';
 import { LLM_FILE, STT_FILE } from './model-pack';
+import { llamaDedicatedGpuConfig, pinNvidiaGpu } from './prefer-nvidia';
+import { pcm16ToWav } from '../../../application/audio';
 
 type CompletionParams = Parameters<typeof import('@qvac/sdk')['completion']>[0];
 type CompletionFinal = Awaited<ReturnType<typeof import('@qvac/sdk')['completion']>['final']>;
@@ -31,6 +35,8 @@ function localWeight(file: string): string | undefined {
   return existsSync(candidate) ? candidate : undefined;
 }
 export async function createSdkClient(onProgress: (message: string) => void, onCompletion?: (trace: CompletionTrace) => void, onBackend?: (trace: BackendTrace) => void, options: SdkClientOptions = {}): Promise<QvacClient> {
+  const nvidia = pinNvidiaGpu();
+  if (nvidia.name) onProgress('GPU: ' + nvidia.name + (nvidia.vulkanIndex === undefined ? '' : ` · Vulkan ${nvidia.vulkanIndex}`));
   // Importing the adapter does not start QVAC; this boundary is reached only after opt-in.
   const sdk = await import('@qvac/sdk');
   if (options.profiler) sdk.profiler.enable({ mode: 'verbose', includeServerBreakdown: true });
@@ -59,15 +65,24 @@ export async function createSdkClient(onProgress: (message: string) => void, onC
           : sdk.loadModel({ modelSrc: sdk.WHISPER_LARGE_V3_TURBO, modelConfig, onProgress: onDownload });
       }
       function loadLlm(path?: string) {
-        const modelConfig = { ctx_size: 4096, ...(options.gpuLayers === undefined ? {} : { gpu_layers: options.gpuLayers }) };
+        const modelConfig = {
+          ctx_size: 4096,
+          ...(options.gpuLayers === 0 ? {} : llamaDedicatedGpuConfig()),
+          ...(options.gpuLayers === undefined ? {} : { gpu_layers: options.gpuLayers }),
+        };
         return path
           ? sdk.loadModel({ modelSrc: path, modelType: 'llamacpp-completion', modelConfig, onProgress: onDownload })
           : sdk.loadModel({ modelSrc: sdk.QWEN3_4B_INST_Q4_K_M, modelConfig, onProgress: onDownload });
       }
     },
     transcribe(modelId, pcm) {
-      const pending = sdk.transcribe({ modelId, audioChunk: Buffer.from(pcm), metadata: false });
-      return { requestId: pending.requestId, final: pending };
+      const wavPath = join(tmpdir(), `philips-stt-${randomUUID()}.wav`);
+      writeFileSync(wavPath, pcm16ToWav(pcm));
+      const pending = sdk.transcribe({ modelId, audioChunk: wavPath, metadata: false });
+      return {
+        requestId: pending.requestId,
+        final: Promise.resolve(pending).finally(() => { try { unlinkSync(wavPath); } catch { /* ignore */ } }),
+      };
     },
     complete(modelId, history, schema) {
       const params = {

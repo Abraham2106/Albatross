@@ -8,6 +8,7 @@ export interface ModelPackStatus {
   ready: boolean;
   totalBytes: number;
   items: readonly { name: string; label: string; file: string; ready: boolean; bytes: number; expected: number }[];
+  loaded?: { stt: boolean; llm: boolean };
 }
 export interface DesktopApi {
   status(): Promise<Result<RuntimeStatus>>;
@@ -28,5 +29,6 @@ export interface DesktopApi {
   confirmar(input: { observacionId: string; respuestas: Record<string, 'si' | 'no' | 'nose'> }): Promise<Result<ReturnType<CibService['confirmar']>>>;
   models(): Promise<Result<ModelPackStatus>>;
   downloadModels(requestId: string): Promise<Result<ModelPackStatus>>;
+  preloadModels(requestId: string, capabilities?: Array<'stt' | 'llm'>): Promise<Result<{ stt: boolean; llm: boolean }>>;
 }
 declare global { interface Window { philips?: DesktopApi } }

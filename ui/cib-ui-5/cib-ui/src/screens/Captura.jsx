@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { extraer, confirmar, descargarModelos, estadoModelos, onProgreso } from '../api/client.js';
+import { extraer, confirmar, descargarModelos, estadoModelos, onProgreso, cancelar, hayEscritorio, precargarModelos } from '../api/client.js';
 import { Micro, SinRed, Copia } from '../components/Iconos.jsx';
 import { startRecording } from '../../../../../src/ui/recorder.ts';
 
@@ -8,7 +8,7 @@ function percentFrom(message) {
   return match ? Number(match[1]) : null;
 }
 
-export default function Captura({ onListo }) {
+export default function Captura({ onListo, onEstado }) {
   const [texto, setTexto] = useState('');
   const [audio, setAudio] = useState(null);
   const [grabando, setGrabando] = useState(false);
@@ -23,17 +23,34 @@ export default function Captura({ onListo }) {
   const [progreso, setProgreso] = useState('');
   const [pct, setPct] = useState(0);
   const recorder = useRef(null);
+  const startedAt = useRef(0);
+  const starting = useRef(false);
+  const warmPromise = useRef(null);
+  const processingCancelled = useRef(false);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      processingCancelled.current = true;
+      void recorder.current?.cancel();
+    };
+  }, []);
 
   useEffect(() => {
     let alive = true;
-    estadoModelos().then(value => { if (alive) setPack(value); });
+    estadoModelos()
+      .then((value) => { if (alive) setPack(value); })
+      .catch(() => { if (alive) setPack(null); });
     const off = onProgreso(({ message }) => {
       setProgreso(message);
+      onEstado?.(message);
       const next = percentFrom(message);
       if (next !== null) setPct(next);
     });
     return () => { alive = false; off(); };
-  }, []);
+  }, [onEstado]);
 
   async function bajarModelos() {
     setError('');
@@ -41,8 +58,9 @@ export default function Captura({ onListo }) {
     setProgreso('Preparando descarga…');
     setPct(0);
     try {
-      setPack(await descargarModelos());
-      setProgreso('Modelos listos');
+      const next = await descargarModelos();
+      setPack(next);
+      setProgreso('Modelos listos · se cargan al procesar');
       setPct(100);
     } catch (e) {
       setError(e.message === 'SIN_BACKEND' ? 'La descarga de modelos solo está en Electron.' : 'No se pudieron descargar los modelos. ' + e.message);
@@ -58,13 +76,17 @@ export default function Captura({ onListo }) {
     }
     setError('');
     setCargando(true);
+    processingCancelled.current = false;
     try {
+      await warmPromise.current;
+      if (processingCancelled.current || !mounted.current) return;
       setResultado(await extraer(texto, audio ? { audio, mimeType: 'audio/wav' } : undefined));
       setRespuestas({});
     } catch (e) {
-      setError(e.message === 'SIN_BACKEND' ? 'El servidor no responde. Revisa que el backend esté corriendo.' : 'No se pudo procesar. ' + e.message);
+      setError(e.message === 'SIN_BACKEND' ? 'No se pudo procesar en el dispositivo.' : 'No se pudo procesar. ' + e.message);
     } finally {
       setCargando(false);
+      void estadoModelos().then(value => { if (mounted.current) setPack(value); }).catch(() => {});
     }
   }
 
@@ -72,6 +94,7 @@ export default function Captura({ onListo }) {
     const current = recorder.current;
     recorder.current = null;
     setGrabando(false);
+    if (startedAt.current) setSegundos(Math.floor((Date.now() - startedAt.current) / 1000));
     if (!current) return;
     try {
       const wav = await current.stop();
@@ -83,14 +106,31 @@ export default function Captura({ onListo }) {
   }
 
   async function pulsarMic() {
+    if (starting.current || grabando) return;
+    starting.current = true;
     setError('');
+    if (recorder.current) await recorder.current.cancel().catch(() => {});
+    recorder.current = null;
+    setAudio(null);
     setSegundos(0);
-    setGrabando(true);
     try {
-      recorder.current = await startRecording(() => { void soltarMic(); }, setSegundos);
+      const opening = startRecording(() => { void soltarMic(); }, setSegundos);
+      if (hayEscritorio() && pack?.ready && !warmPromise.current && (!pack.loaded?.stt || pack.loaded?.llm)) {
+        warmPromise.current = precargarModelos(['stt'])
+          .then(loaded => { if (mounted.current && loaded) setPack(prev => ({ ...prev, loaded })); })
+          .catch(e => { if (mounted.current) setError('No se pudo preparar Whisper. Procesar reintentará. ' + e.message); })
+          .finally(() => { warmPromise.current = null; });
+      }
+      const opened = await opening;
+      if (!mounted.current) { await opened.cancel(); return; }
+      recorder.current = opened;
+      startedAt.current = Date.now();
+      setGrabando(true);
     } catch {
       setGrabando(false);
       setError('No se pudo abrir el micrófono. Escribí el dictado.');
+    } finally {
+      starting.current = false;
     }
   }
 
@@ -120,7 +160,7 @@ export default function Captura({ onListo }) {
             {pack && (
               <div className="pack-modelos">
                 {pack.ready ? (
-                  <p className="fila-s">Modelos listos en el dispositivo.</p>
+                  <p className="fila-s">Al grabar se carga Whisper. Qwen entra al procesar, no juntos.</p>
                 ) : (
                   <>
                     <button data-testid="cib-modelos" className="btn btn-sec" onClick={bajarModelos} disabled={bajando}>
@@ -158,6 +198,11 @@ export default function Captura({ onListo }) {
             <button data-testid="cib-procesar" className="btn" onClick={procesar} disabled={cargando || bajando || (pack && !pack.ready)} style={{ marginTop: 12 }}>
               {cargando ? 'Procesando en el dispositivo' : pack && !pack.ready ? 'Descargá los modelos para procesar' : 'Procesar'}
             </button>
+            {cargando && (
+              <button type="button" className="btn btn-sec" onClick={() => { processingCancelled.current = true; void cancelar(); }} style={{ marginTop: 8 }}>
+                Cancelar
+              </button>
+            )}
           </>
         )}
 
