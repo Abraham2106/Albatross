@@ -1,4 +1,5 @@
 import type { Site } from '../../domain/types';
+import type { ChainVerdict } from '../integrity';
 import type { ExtractionData, InferenceProvenance, ObservationCandidate } from './inference-engine';
 
 export interface HospitalInput { id?: string; name: string; country: string; city: string }
@@ -18,5 +19,7 @@ export interface VisitRepository {
   getDraft(id: string): VisitDraft | undefined;
   listDrafts(): VisitDraft[];
   accept(visit: AcceptedVisit): Site;
+  /** Verifica que ninguna observación aceptada haya sido alterada después. */
+  verifyIntegrity(): ChainVerdict;
   close(): void;
 }

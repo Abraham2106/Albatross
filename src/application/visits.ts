@@ -34,6 +34,7 @@ export function toDomainCandidate(c: ObservationCandidate, siteId: string, autho
 export class VisitService {
   constructor(private readonly engine: InferenceEngine, private readonly repository: VisitRepository, private readonly newId: () => string, private readonly now = () => new Date().toISOString()) {}
   list() { return { sites: this.repository.listSites(), drafts: this.repository.listDrafts() }; }
+    verifyIntegrity() { return this.repository.verifyIntegrity(); }
   getProfile(id: string) {
     const entry = this.repository.getSite(text(id, 'Hospital'));
     if (!entry) invalid('Hospital no encontrado.');

@@ -45,6 +45,7 @@ function setupHandlers() {
   handle('profile', id => runtime!.service.getProfile(text(id, 'Hospital')));
   handle('process', value => operation(value, (v, signal) => runtime!.service.process(v.input as ProcessVisitInput, { signal })));
   handle('accept', value => runtime!.service.accept(value as ReviewInput));
+    handle('verify-integrity', () => runtime!.service.verifyIntegrity());
   handle('follow-ups', value => operation(value, (v, signal) => runtime!.service.followUps(text(v.hospitalId, 'Hospital'), { signal })));
   handle('cancel', value => { const id = text(value, 'Solicitud'); if (active?.id === id) active.controller.abort(); });
   handle('clientes', () => runtime!.cib.clientes());
