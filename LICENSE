@@ -1,0 +1,67 @@
+Copyright (c) 2026 José Ricardo Solís Arias, Marco Goméz Mendez, Abraham Solano Parrales
+y Sebastián Granados Artavia. Todos los derechos reservados.
+
+Este software y su documentación son propiedad exclusiva de sus autores, en
+adelante "los Titulares".
+
+
+PERMISO LIMITADO DE EVALUACIÓN
+
+Se concede a los organizadores, jurados, mentores, comité técnico y empresas
+patrocinadoras del Decentralized AI Hackathon (ISD Summit, Ciudad de Panamá,
+9 al 11 de septiembre de 2026) un permiso no exclusivo, intransferible,
+revocable y sin costo para acceder, clonar, compilar, ejecutar y evaluar este
+software con el único propósito de calificar la participación del equipo en
+dicha competencia.
+
+Este permiso se limita al período de evaluación de la competencia y no incluye
+ningún otro uso.
+
+
+RESTRICCIONES
+
+Fuera del permiso anterior, ninguna persona ni entidad puede usar, copiar,
+modificar, fusionar, publicar, distribuir, sublicenciar, vender, alquilar,
+descompilar ni crear obras derivadas de este software, en todo o en parte,
+sin autorización previa y por escrito de los Titulares.
+
+
+TITULARIDAD
+
+La participación en el Decentralized AI Hackathon no transfiere titularidad ni
+concede licencia alguna sobre este software a los organizadores, a Tether ni a
+las empresas patrocinadoras, conforme a los Términos y Condiciones de la propia
+competencia. Cualquier acuerdo de uso, licenciamiento o cesión posterior se
+negocia de forma directa con los Titulares.
+
+
+COMPONENTES DE TERCEROS
+
+Este software incorpora bibliotecas de terceros que conservan sus propias
+licencias. Ninguna disposición de este documento pretende restringir los
+derechos que esas licencias conceden sobre sus respectivos componentes. El
+detalle está en la sección "Trabajo previo y componentes de terceros" del
+README.
+
+Los pesos de los modelos de inteligencia artificial no forman parte de este
+repositorio, se descargan en tiempo de ejecución desde sus fuentes originales
+y se rigen exclusivamente por las licencias de sus autores.
+
+
+EXENCIÓN DE GARANTÍA Y LIMITACIÓN DE RESPONSABILIDAD
+
+EL SOFTWARE SE PROPORCIONA "TAL CUAL", SIN GARANTÍA DE NINGÚN TIPO, EXPRESA O
+IMPLÍCITA, INCLUIDAS ENTRE OTRAS LAS GARANTÍAS DE COMERCIABILIDAD, IDONEIDAD
+PARA UN PROPÓSITO PARTICULAR Y NO INFRACCIÓN. EN NINGÚN CASO LOS TITULARES
+SERÁN RESPONSABLES POR RECLAMOS, DAÑOS U OTRAS RESPONSABILIDADES, YA SEA EN
+UNA ACCIÓN CONTRACTUAL, EXTRACONTRACTUAL O DE OTRO TIPO, DERIVADOS DE O
+RELACIONADOS CON EL SOFTWARE O SU USO.
+
+Este prototipo no es un dispositivo médico ni una herramienta de decisión
+clínica, y no debe utilizarse como tal.
+
+
+CONSULTAS DE LICENCIAMIENTO
+Para consultas de licenciamiento, por favor contactar a los autores a través del correo electrónico:
+ricardo02solis@gmail.com 
+sebasgranadosa@gmail.com
