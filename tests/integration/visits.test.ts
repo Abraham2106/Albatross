@@ -10,7 +10,7 @@ import { pcmToWav } from '../../src/application/audio';
 import { TEST_TRANSCRIPT, candidate, emptyMention, fakeEngine, testProvenance } from '../helpers/inference';
 
 const now = '2026-09-09T12:00:00.000Z';
-const hospital = { name: 'Hospital A', country: 'Costa Rica', city: 'San José' };
+const hospital = { name: 'Hospital DemoCare Green', country: 'Costa Rica', city: 'San Jose' };
 const resources: Array<() => void> = [];
 afterEach(() => { resources.splice(0).reverse().forEach(close => close()); });
 function setup(filename = ':memory:', engine: InferenceEngine = fakeEngine()) {
@@ -127,10 +127,10 @@ describe('dictation, human review and local persistence', () => {
     expect(result.questions.some(q => q.modality === 'CT' && q.field === 'quantity')).toBe(true);
   });
   it('requires acknowledgment when the dictation names a different hospital', async () => {
-    const quote = 'En Hospital B de Panamá vi dos CT.';
+    const quote = 'En Hospital DemoCare Pacific de Panama vi dos CT.';
     const { service } = setup(':memory:', fakeEngine({
       async extractObservations(input) {
-        return { data: { hospitalId: input.hospitalId, mentionedHospital: { name: 'Hospital B', country: 'Panamá', city: null, evidence: 'Hospital B de Panamá' }, candidates: [candidate('CT', 2, 'dos CT')] }, provenance: testProvenance };
+        return { data: { hospitalId: input.hospitalId, mentionedHospital: { name: 'Hospital DemoCare Pacific', country: 'Panama', city: null, evidence: 'Hospital DemoCare Pacific de Panama' }, candidates: [candidate('CT', 2, 'dos CT')] }, provenance: testProvenance };
       },
     }));
     const draft = await service.process({ hospital, transcript: quote });

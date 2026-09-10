@@ -24,8 +24,8 @@ const line = (t: string) => console.log(`\n=== ${t} ===`);
 // 1. Sitio nuevo: cero datos
 line("1. Sitio nuevo, cero datos");
 let alpha = createSite({
-  id: "hospital-alpha",
-  name: "Hospital Alpha",
+  id: "hospital-democare-horizon",
+  name: "Hospital DemoCare Horizon",
   city: "Sao Paulo",
   country: "Brazil",
   profileType: "hospital_general",

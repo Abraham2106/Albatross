@@ -3,7 +3,7 @@ import { EstadoBadge, Confianza, MOTIVO } from '../components/Estado.jsx';
 import { Cargando, Error, usePedido } from '../components/Estados.jsx';
 import { Check } from '../components/Iconos.jsx';
 
-/** "2 tomógrafos · Medix · 8 años" armado solo con lo que se sabe. */
+/** "2 tomógrafos · Orion Imaging · 11 años" armado solo con lo que se sabe. */
 function detalle(e) {
   if (e.estado === 'Unknown') return 'Nadie ha reportado esta modalidad';
   const partes = [];

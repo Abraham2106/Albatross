@@ -40,8 +40,8 @@ const NOW = "2026-09-09T12:00:00.000Z";
 
 function alpha(): Site {
   return createSite({
-    id: "hospital-alpha",
-    name: "Hospital Alpha",
+    id: "hospital-democare-horizon",
+    name: "Hospital DemoCare Horizon",
     city: "Sao Paulo",
     country: "Brazil",
     profileType: "hospital_general",
@@ -50,7 +50,7 @@ function alpha(): Site {
 
 function candidate(over: Partial<Candidate> = {}): Candidate {
   return {
-    siteId: "hospital-alpha",
+    siteId: "hospital-democare-horizon",
     modality: "MR",
     quantity: 3,
     source: { author: "Field User 01", timestamp: "2026-09-01T10:00:00.000Z", channel: "Voice" },
@@ -297,7 +297,7 @@ describe("certeza", () => {
   it("el reporte desglosa el porcentaje", () => {
     const site = mergeCandidate(alpha(), candidate({ brand: "NovaMed", approxAgeYears: 7 })).site;
     const report = explainCertainty(site, NOW);
-    assert.equal(report.siteId, "hospital-alpha");
+    assert.equal(report.siteId, "hospital-democare-horizon");
     assert.ok(report.perModality.length >= 5);
     assert.ok(report.perModality.some((m) => m.modality === "MR" && m.known));
     assert.ok(report.percent >= 0 && report.percent <= 100);

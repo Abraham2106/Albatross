@@ -264,7 +264,7 @@ export default function Captura({ visita, onListo, onEstado }) {
                   value={texto}
                   disabled={!!audio}
                   onChange={(e) => { setTexto(e.target.value); if (error) setError(''); }}
-                  placeholder="Estuve en Hospital Calderón Guardia, vi dos tomógrafos…"
+                  placeholder="Estuve en Clinica DemoCare Andes, Santiago. Vi un tomógrafo CT…"
                 />
               </label>
               {audio && <p className="fila-s">Audio capturado. Procesalo o grabá de nuevo.</p>}
@@ -325,13 +325,13 @@ export default function Captura({ visita, onListo, onEstado }) {
               <h2>Qué conviene decir</h2>
               <p className="guia-intro">El extractor solo guarda lo que nombrás. Si no hay marca o modelo, decí que no los viste; si no los mencionás, aparece Unknown.</p>
               <ul className="guia-lista">
-                <li><b>Hospital y ciudad</b> — nombre completo, no solo “el Calderón”.</li>
+                <li><b>Hospital y ciudad</b> — nombre completo, no solo “el Andes”.</li>
                 <li><b>Modalidad y cantidad</b> — dos CT, un MR, un ultrasonido.</li>
                 <li><b>Marca y modelo</b> — si los viste; si no, “no sé la marca”.</li>
                 <li><b>Edad o año</b> — “unos ocho años” o “instalado en 2018”.</li>
               </ul>
               <h2>Ejemplo</h2>
-              <p className="cita-dictado">Estuve en Hospital Calderón Guardia, San José. Vi dos tomógrafos CT marca NovaMed modelo NM-CT 320 de unos ocho años, y un resonador MR marca Aurelia Health modelo AH-MR 650.</p>
+              <p className="cita-dictado">Estuve en Clinica DemoCare Andes, Santiago. Vi un tomógrafo CT marca BluePeak Medical modelo BP-CT 610 de unos trece años, y dos resonadores MR marca Orion Imaging modelo OI-MR 620 de unos cinco años.</p>
             </aside>
           </div>
         )}

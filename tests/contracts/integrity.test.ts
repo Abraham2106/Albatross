@@ -100,7 +100,7 @@ describe('cadena de custodia sobre SQLite', () => {
 
   function draft(id: string, baseRevision = 0): VisitDraft {
     return {
-      id, site: createSite({ id: 'h1', name: 'Hospital Alpha', city: 'São Paulo', country: 'Brazil' }),
+      id, site: createSite({ id: 'h1', name: 'Hospital DemoCare Horizon', city: 'Sao Paulo', country: 'Brazil' }),
       baseRevision, transcript: 'Vi dos CT.',
       extraction: { hospitalId: 'h1', mentionedHospital: { name: null, city: null, country: null, evidence: null }, candidates: [] },
       provenance: { execution: 'local', model: 'QWEN3_4B_INST_Q4_K_M' },

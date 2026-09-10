@@ -17,7 +17,7 @@ Llenar un formulario después de cada visita no funciona: toma minutos que nadie
 
 Un colega dicta veinte segundos al salir del hospital:
 
-> «Estuve en Hospital Alpha en São Paulo. Vi dos CT y tres MR. Dos de los MR parecen de unos nueve años, uno es bastante más nuevo.»
+> «Estuve en Hospital DemoCare Horizon en Sao Paulo. Vi tres MR de BluePeak Medical. Dos parecen de unos nueve años, uno es bastante más nuevo.»
 
 Albatross transcribe, extrae los grupos de equipo, muestra lo que entendió para que la persona lo confirme, y actualiza la ficha del hospital. La certeza del sitio sube y su posición en la lista baja, porque ya hace falta menos.
 

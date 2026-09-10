@@ -12,7 +12,7 @@
     {
       "id": "horizon",
       "nombre": "Hospital DemoCare Horizon",
-      "ciudad": "São Paulo",
+      "ciudad": "Sao Paulo",
       "pais": "Brasil",
       "confianza": 40,
       "ultimaVisita": "2026-08-16",
@@ -159,7 +159,7 @@
           },
           {
             "id": "sao-paulo",
-            "nombre": "São Paulo",
+            "nombre": "Sao Paulo",
             "confianza": 40,
             "clientes": 1,
             "equipos": 2,
