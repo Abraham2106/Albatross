@@ -259,6 +259,7 @@ export default function Captura({ onListo, onEstado }) {
 
               <div className="acciones">
                 <button type="button" data-testid="cib-procesar" className="btn" onClick={procesar} disabled={cargando || bajando || grabando || (pack && !pack.ready)}>
+                  {cargando && <span className="girando" aria-hidden="true" />}
                   {cargando ? 'Procesando en el dispositivo' : pack && !pack.ready ? 'Descargá los modelos para procesar' : 'Procesar'}
                 </button>
                 {cargando && (

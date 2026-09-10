@@ -8,7 +8,7 @@ export function esSinDatos(error) {
 }
 
 export function Cargando({ que = 'Cargando' }) {
-  return <p className="vacio">{que}…</p>;
+  return <p className="vacio"><span className="girando" aria-hidden="true" />{que}…</p>;
 }
 
 export function Error({ error, onReintentar }) {

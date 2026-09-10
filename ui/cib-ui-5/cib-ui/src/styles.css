@@ -789,6 +789,19 @@ td { padding: 10px 0; border-top: 1px solid var(--linea); }
 }
 .vacio .btn { margin-top: 14px; }
 
+.girando {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.5em;
+  vertical-align: -0.15em;
+  border: 2px solid var(--linea);
+  border-top-color: var(--acento);
+  border-radius: 50%;
+  animation: girar 0.8s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+
 @media (max-width: 799px) {
   .app { grid-template-columns: var(--rail-fino) minmax(0, 1fr); }
   .marca { justify-content: center; padding: 4px 0 12px; }
