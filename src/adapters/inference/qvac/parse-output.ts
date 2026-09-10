@@ -83,11 +83,13 @@ function coerceUnknown(value: unknown): Array<(typeof UNKNOWN_FIELDS)[number]> {
     typeof item === 'string' && (UNKNOWN_FIELDS as readonly string[]).includes(item)))];
 }
 
+const notUnknown = (value: string | null) => value === 'Unknown' ? null : value;
+
 function coerceHospital(raw: unknown, transcript: string): MentionedHospital {
   const h = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
   const name = coerceNullString(h.name);
-  const country = coerceNullString(h.country);
-  const city = coerceNullString(h.city);
+  const country = notUnknown(coerceNullString(h.country));
+  const city = notUnknown(coerceNullString(h.city));
   let evidence = coerceNullString(h.evidence, 2000);
   if (evidence) evidence = alignEvidence(transcript, evidence) ?? null;
   if ((name || country || city) && !evidence) {
