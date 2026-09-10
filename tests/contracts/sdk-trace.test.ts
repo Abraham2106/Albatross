@@ -3,15 +3,26 @@ import { createSdkClient } from '../../src/adapters/inference/qvac/sdk-client';
 import { QvacInferenceEngine } from '../../src/adapters/inference/qvac';
 import { candidate } from '../helpers/inference';
 
-const { completion, profiler } = vi.hoisted(() => ({ completion: vi.fn(), profiler: { enable: vi.fn(), disable: vi.fn(), onRecord: vi.fn(() => () => {}) } }));
+const { completion, profiler, loadModel } = vi.hoisted(() => ({ completion: vi.fn(), profiler: { enable: vi.fn(), disable: vi.fn(), onRecord: vi.fn(() => () => {}) }, loadModel: vi.fn((_params: Record<string, unknown>) => Object.assign(Promise.resolve('llm-model'), { requestId: 'load' })) }));
 vi.mock('@qvac/sdk', () => ({
   completion,
   profiler,
-  loadModel: vi.fn(() => Object.assign(Promise.resolve('llm-model'), { requestId: 'load' })),
+  loadModel,
   unloadModel: vi.fn(async () => {}),
   close: vi.fn(async () => {}),
 }));
 beforeEach(() => { completion.mockReset(); profiler.enable.mockClear(); profiler.disable.mockClear(); });
+
+describe('CPU-only measurement configuration', () => {
+  it('sends gpu_layers to llama.cpp only when the caller selects it', async () => {
+    loadModel.mockClear();
+    (await createSdkClient(() => {})).load('llm');
+    expect(loadModel.mock.calls[0]?.[0]).toMatchObject({ modelConfig: { ctx_size: 4096 } });
+    expect(loadModel.mock.calls[0]?.[0]).not.toHaveProperty('modelConfig.gpu_layers');
+    (await createSdkClient(() => {}, undefined, undefined, { gpuLayers: 0 })).load('llm');
+    expect(loadModel.mock.calls[1]?.[0]).toMatchObject({ modelConfig: { ctx_size: 4096, gpu_layers: 0 } });
+  });
+});
 
 describe('profiler opt-in', () => {
   it('stays off for the default client and the engine default factory', async () => {

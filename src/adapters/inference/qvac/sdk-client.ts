@@ -17,7 +17,7 @@ export interface BackendTrace {
   fallback?: { requestedDevice?: 'cpu' | 'gpu'; reason: string };
 }
 export interface RequestRun<T> { requestId: string; final: Promise<T> }
-export interface SdkClientOptions { profiler?: boolean }
+export interface SdkClientOptions { profiler?: boolean; gpuLayers?: number }
 export interface QvacClient {
   load(capability: 'stt' | 'llm', source?: string): RequestRun<string>;
   transcribe(modelId: string, pcm: Uint8Array): RequestRun<string>;
@@ -59,7 +59,7 @@ export async function createSdkClient(onProgress: (message: string) => void, onC
           : sdk.loadModel({ modelSrc: sdk.WHISPER_LARGE_V3_TURBO, modelConfig, onProgress: onDownload });
       }
       function loadLlm(path?: string) {
-        const modelConfig = { ctx_size: 4096 };
+        const modelConfig = { ctx_size: 4096, ...(options.gpuLayers === undefined ? {} : { gpu_layers: options.gpuLayers }) };
         return path
           ? sdk.loadModel({ modelSrc: path, modelType: 'llamacpp-completion', modelConfig, onProgress: onDownload })
           : sdk.loadModel({ modelSrc: sdk.QWEN3_4B_INST_Q4_K_M, modelConfig, onProgress: onDownload });

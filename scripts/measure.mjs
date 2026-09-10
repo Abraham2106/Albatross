@@ -1,4 +1,4 @@
-/** Real local extraction benchmark; --es selects Spanish, --self-check needs no models. */
+/** Real local extraction benchmark; --es selects Spanish, --cpu keeps every layer off the GPU, --self-check needs no models. */
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { registerHooks } from 'node:module';
@@ -29,6 +29,7 @@ const pct = (n, d) => d ? `${(100 * n / d).toFixed(1)}% (${n}/${d})` : 'N/A';
 const ms = n => n === null ? 'N/A' : n.toFixed(1);
 const safe = value => String(value).replaceAll('|', '/').replaceAll('\n', ' ');
 const scoredRowCount = result => result.error ? 0 : result.emitted.length;
+const rootReport = metadata => `REPORT${metadata.language === 'es' ? '.es' : ''}${metadata.device === 'cpu' ? '.cpu' : ''}.md`;
 
 function renderReport(run, artifactPath) {
   const { metadata, summary: s, results } = run;
@@ -39,7 +40,7 @@ function renderReport(run, artifactPath) {
   };
   return `# Medicion de extraccion — evaluador v2
 
-Generado: ${metadata.startedAt}. Idioma: ${metadata.language}. SDK QVAC: ${metadata.sdk}.
+Generado: ${metadata.startedAt}. Idioma: ${metadata.language}. SDK QVAC: ${metadata.sdk}. Dispositivo: ${metadata.device ?? 'gpu'} (gpu_layers ${metadata.modelConfig?.gpu_layers ?? 'default del SDK'}).
 ${s.cases} dictados de texto; no mide Whisper ni audio. Modelos locales, prompt y parser sin modificaciones.
 [Respuestas originales, parametros y diferencias](${artifactPath}).
 
@@ -123,12 +124,13 @@ async function main() {
     run.metadata.rescoredAt = new Date().toISOString();
     run.metadata.rescoredWith = createHash('sha256').update(readFileSync(rel('scripts/measurement-core.mjs'))).digest('hex');
     saveJson(artifact, run);
-    writeFileSync(rel(run.metadata.language === 'es' ? 'REPORT.es.md' : 'REPORT.md'), renderReport(run, artifact));
+    writeFileSync(rel(rootReport(run.metadata)), renderReport(run, artifact));
     writeFileSync(new URL('REPORT.md', rel(artifact)), renderReport(run, 'run.json'));
     console.log(`Metricas recalculadas sin inferencia: ${artifact}`);
     return;
   }
   const language = process.argv.includes('--es') ? 'es' : 'en';
+  const device = process.argv.includes('--cpu') ? 'cpu' : 'gpu';
   const fixture = readJson('fixtures/voice-tests.json');
   validateLanguage(fixture.casos, language);
   for (const c of fixture.casos) for (const row of c.expected) {
@@ -142,19 +144,19 @@ async function main() {
   const pack = inspectModels();
   if (!pack.ready) throw new Error('Faltan modelos completos. Ejecuta npm run models. No se reemplazo el reporte.');
   const startedAt = new Date().toISOString();
-  const dir = `${outputDir.replace(/[\\/]+$/g, '')}/${startedAt.replaceAll(':', '-')}-${language}`;
+  const dir = `${outputDir.replace(/[\\/]+$/g, '')}/${startedAt.replaceAll(':', '-')}-${language}${device === 'cpu' ? '-cpu' : ''}`;
   mkdirSync(rel(dir), { recursive: true });
   const sourceFiles = ['scripts/measurement-core.mjs', 'scripts/measure.mjs', 'fixtures/voice-tests.json', 'src/domain/derive.ts', 'src/adapters/inference/qvac/schema.ts', 'src/adapters/inference/qvac/parse-output.ts', 'src/adapters/inference/qvac/sdk-client.ts'];
-  const metadata = { evaluatorVersion: 2, startedAt, language, expectedCaseIds: fixture.casos.map(c => c.id), node: process.version, sdk: readJson('node_modules/@qvac/sdk/package.json').version,
+  const metadata = { evaluatorVersion: 2, startedAt, language, device, expectedCaseIds: fixture.casos.map(c => c.id), node: process.version, sdk: readJson('node_modules/@qvac/sdk/package.json').version,
     hardware: { platform: platform(), arch: arch(), cpu: cpus()[0]?.model }, models: pack,
-    modelConfig: { ctx_size: 4096 }, ageAliases: AGE_ALIASES,
+    modelConfig: { ctx_size: 4096, ...(device === 'cpu' ? { gpu_layers: 0 } : {}) }, ageAliases: AGE_ALIASES,
     sourceHashes: Object.fromEntries(sourceFiles.map(path => [path, createHash('sha256').update(readFileSync(rel(path))).digest('hex')])) };
   let trace = null;
-  const engine = new QvacInferenceEngine({ enabled: true, clientFactory: () => createSdkClient(message => console.log(message), value => { trace = value; }, undefined, { profiler: true }) });
+  const engine = new QvacInferenceEngine({ enabled: true, clientFactory: () => createSdkClient(message => console.log(message), value => { trace = value; }, undefined, { profiler: true, ...(device === 'cpu' ? { gpuLayers: 0 } : {}) }) });
   const run = { metadata, warmup: null, results: [], summary: null, error: null };
   const artifact = `${dir}/run.json`;
   try {
-    console.log(`Calentando Qwen; idioma ${language}...`);
+    console.log(`Calentando Qwen; idioma ${language}; dispositivo ${device}...`);
     let warmupError = null;
     try { await engine.extractObservations({ hospitalId: 'warmup', transcript: 'Warmup.' }); }
     catch (error) { warmupError = `${error.code ?? error.name}: ${error.message}`; }
@@ -183,7 +185,7 @@ async function main() {
     finally { saveJson(artifact, run); console.log(`Diagnostico: ${artifact}`); }
   }
   const report = renderReport(run, artifact);
-  if (outputAt < 0) writeFileSync(rel(language === 'es' ? 'REPORT.es.md' : 'REPORT.md'), report);
+  if (outputAt < 0) writeFileSync(rel(rootReport(metadata)), report);
   writeFileSync(rel(`${dir}/REPORT.md`), renderReport(run, 'run.json'));
   console.log(JSON.stringify({ ...run.summary, fields: undefined }, null, 2));
   if (run.summary.errors) process.exitCode = 1;

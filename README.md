@@ -57,6 +57,14 @@ La interfaz no tiene acceso a Node: el preload expone solo `window.philips`. Fas
 
 - [Guía de validación conjunta](docs/qvac-validation.md)
 
+Medición de extracción (evaluador v2, `scripts/measure.mjs`; necesita los pesos en `models/`):
+
+- `node --experimental-transform-types scripts/measure.mjs`: diez casos en inglés en GPU → `REPORT.md` y `reports/extraction/<fecha>-en/run.json`.
+- `--es`: los mismos casos en español → `REPORT.es.md`.
+- `--cpu`: carga Qwen con `gpu_layers: 0` para medir sin GPU (laptop de campo) → `REPORT.cpu.md` / `REPORT.es.cpu.md`. Configuración disponible, aún sin correr.
+- `--replay reports/extraction/<corrida>/run.json`: recalcula métricas sin inferencia.
+- `--self-check`: pruebas del evaluador, sin modelos.
+
 ```sh
 npm run test
 npm run typecheck
