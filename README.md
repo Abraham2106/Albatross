@@ -27,7 +27,7 @@ La siguiente persona que abra ese hospital no ve un formulario en blanco. Ve tre
 
 | Antes de la visita | Después del dictado |
 | --- | --- |
-| ![Ficha del hospital](reports/profile-desktop.png) | ![Revisión de lo captado](reports/review-desktop.png) |
+| ![Ficha del hospital] | ![Revisión de lo captado] |
 
 Cuatro pantallas: **Hospitales** (ordenados por lo que falta), **Capturar** (dictado y revisión), **Cobertura** (región → país → ciudad → hospital) y **Panorama** (equipos por modalidad, base envejecida, sitios sin verificar).
 
