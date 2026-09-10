@@ -20,7 +20,7 @@ export interface CibHospitalPin { id: string; nombre: string; confianza: number;
 export interface CibCiudad { id: string; nombre: string; confianza: number; clientes: number; equipos: number; hospitales: CibHospitalPin[] }
 export interface CibPais { id: string; nombre: string; confianza: number; clientes: number; equipos: number; ciudades: CibCiudad[] }
 export interface CibGeo { region: string; confianza: number; paises: CibPais[] }
-export interface CibOportunidad { id: string; cliente: string; motivo: string; prioridad: 'alta' | 'media' | 'visitar' }
+export interface CibOportunidad { id: string; clienteId: string; cliente: string; motivo: string; prioridad: 'alta' | 'media' | 'visitar' }
 export interface CibResumen {
   region: string; pais: string; clientes: number; equipos: number;
   confianzaMedia: number; sinVerificar: number; oportunidades: CibOportunidad[];
@@ -142,12 +142,12 @@ export function toResumen(sites: readonly Site[], now: string, pais?: string): C
   const confianzaMedia = clientes.length ? Math.round(clientes.reduce((n, c) => n + c.confianza, 0) / clientes.length) : 0;
   const oportunidades: CibOportunidad[] = [
     ...findRefreshOpportunities(scoped, 10).slice(0, 8).map(o => ({
-      id: o.siteId + ':' + o.modality, cliente: o.siteName,
+      id: o.siteId + ':' + o.modality, clienteId: o.siteId, cliente: o.siteName,
       motivo: o.modality + ' de ' + o.approxAgeYears + ' años en ' + o.city,
       prioridad: o.approxAgeYears >= 13 ? 'alta' as const : 'media' as const,
     })),
     ...scoped.filter(s => explainCertainty(s, now).percent < 40).slice(0, 4).map(s => ({
-      id: s.id + ':visitar', cliente: s.name, motivo: 'Confianza baja: faltan datos por confirmar', prioridad: 'visitar' as const,
+      id: s.id + ':visitar', clienteId: s.id, cliente: s.name, motivo: 'Confianza baja: faltan datos por confirmar', prioridad: 'visitar' as const,
     })),
   ];
   return {

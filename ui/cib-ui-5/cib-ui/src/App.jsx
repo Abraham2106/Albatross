@@ -85,7 +85,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [clienteId]);
 
-  const fichaDesdeMapa = tab === 'mapa' && clienteId;
+  const fichaAparte = (tab === 'mapa' || tab === 'resumen') && clienteId;
 
   return (
     <div className="app">
@@ -130,7 +130,7 @@ export default function App() {
 
       <div className="columna">
         <main className="workspace" id="principal">
-          <div className={'vista' + (tab === 'clientes' && !fichaDesdeMapa ? ' vista-on' : '')}>
+          <div className={'vista' + (tab === 'clientes' ? ' vista-on' : '')}>
             <div className={'reparto' + (clienteId ? ' reparto-abierto' : '')}>
               <div className="reparto-lista">
                 <Clientes
@@ -166,11 +166,11 @@ export default function App() {
             <Mapa key={version} onAbrirCliente={(id) => abrirCliente(id, 'mapa')} />
           </div>
 
-          <div className={'vista' + (tab === 'resumen' ? ' vista-on' : '')}>
-            <ResumenPantalla key={version} />
+          <div className={'vista' + (tab === 'resumen' && !clienteId ? ' vista-on' : '')}>
+            <ResumenPantalla key={version} onAbrirCliente={(id) => abrirCliente(id, 'resumen')} />
           </div>
 
-          {fichaDesdeMapa && (
+          {fichaAparte && (
             <div className="vista vista-on">
               <Ficha key={version} id={clienteId} onVisita={registrarVisita} onVolver={() => { setClienteId(null); setTab(volverA); }} />
             </div>

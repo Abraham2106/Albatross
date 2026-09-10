@@ -7,7 +7,7 @@ const COLOR = {
   visitar: ['var(--desconocido-bg)', 'var(--desconocido)']
 };
 
-export default function Resumen() {
+export default function Resumen({ onAbrirCliente }) {
   const { datos: r, error, reintentar } = usePedido(obtenerResumen);
 
   if (error && !esSinDatos(error)) return <Error error={error} onReintentar={reintentar} />;
@@ -42,7 +42,13 @@ export default function Resumen() {
           {r.oportunidades.map((o) => {
             const [bg, fg] = COLOR[o.prioridad] || COLOR.visitar;
             return (
-              <div key={o.id} className="equipo" style={{ borderLeftColor: fg }}>
+              <button
+                key={o.id}
+                type="button"
+                className="equipo"
+                style={{ width: '100%', textAlign: 'left', border: 0, borderLeft: `3px solid ${fg}` }}
+                onClick={() => onAbrirCliente(o.clienteId)}
+              >
                 <div style={{ minWidth: 0 }}>
                   <p className="fila-t">{o.cliente}</p>
                   <p className="fila-s">{o.motivo}</p>
@@ -50,7 +56,7 @@ export default function Resumen() {
                 <span className="badge" style={{ background: bg, color: fg }}>
                   {o.prioridad === 'visitar' ? 'Visitar' : `Prioridad ${o.prioridad}`}
                 </span>
-              </div>
+              </button>
             );
           })}
         </div>

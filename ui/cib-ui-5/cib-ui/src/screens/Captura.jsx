@@ -6,6 +6,11 @@ import { MOTIVO } from '../components/Estado.jsx';
 import { DEVELOPMENT_TOOLS } from '../../../../../src/ui/development-tools.ts';
 import { Micro, SinRed, Copia } from '../components/Iconos.jsx';
 import { startRecording } from '../../../../../src/ui/recorder.ts';
+import { MAX_AUDIO_SECONDS } from '../../../../../src/application/audio.ts';
+
+function minutos(s) {
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
 
 function percentFrom(message) {
   const match = String(message ?? '').match(/(\d+)\s*%/);
@@ -205,6 +210,7 @@ export default function Captura({ visita, onListo, onEstado }) {
   }
 
   const faltan = resultado && resultado.items.some((i) => !respuestas[i.id]);
+  const puedeProcesar = !(cargando || bajando || grabando || (pack && !pack.ready));
 
   return (
     <div className="pantalla">
@@ -227,7 +233,7 @@ export default function Captura({ visita, onListo, onEstado }) {
                   {abriendo
                     ? 'Abriendo micrófono…'
                     : grabando
-                      ? `Grabando · ${segundos} s`
+                      ? `Grabando · ${minutos(segundos)} / ${minutos(MAX_AUDIO_SECONDS)}`
                       : audio
                         ? `Dictado listo · ${segundos} s`
                         : 'Sin grabación'}
@@ -264,6 +270,12 @@ export default function Captura({ visita, onListo, onEstado }) {
                   value={texto}
                   disabled={!!audio}
                   onChange={(e) => { setTexto(e.target.value); if (error) setError(''); }}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey)) return;
+                    e.preventDefault();
+                    if (!puedeProcesar) return;
+                    void procesar();
+                  }}
                   placeholder="Estuve en Clinica DemoCare Andes, Santiago. Vi un tomógrafo CT…"
                 />
               </label>
@@ -271,7 +283,7 @@ export default function Captura({ visita, onListo, onEstado }) {
               {error && <p className="error" role="alert">{error}</p>}
 
               <div className="acciones">
-                <button type="button" data-testid="cib-procesar" className="btn" onClick={procesar} disabled={cargando || bajando || grabando || (pack && !pack.ready)}>
+                <button type="button" data-testid="cib-procesar" className="btn" title="Ctrl+Enter" onClick={procesar} disabled={!puedeProcesar}>
                   {cargando && <span className="girando" aria-hidden="true" />}
                   {cargando ? 'Procesando en el dispositivo' : pack && !pack.ready ? 'Descargá los modelos para procesar' : 'Procesar'}
                 </button>
