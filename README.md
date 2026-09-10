@@ -53,6 +53,8 @@ Si los archivos ya están en `models/`, la app los habilita sola. Sin pesos, Pro
 - `npm start`: abre Electron con el build local; requiere `npm run build` previamente.
 - `npm run smoke`: comprueba el build en una ventana Electron oculta y cierra automáticamente.
 
+Recorrido de la interfaz para el video (verificado el 2026-09-10 con Playwright sobre Electron): `npm run dev` levanta Vite en `http://127.0.0.1:5187` y abre Electron con `window.philips`; Capturar → escribir el enunciado → Procesar (la primera extracción carga Qwen, ~20 s; después ~3 s) → responder las tarjetas «Confirmá lo que entendí» → Guardar observación → Hospitales muestra el cliente y su ficha con la base instalada. Capturas de cada paso, registro de consola y el script del recorrido quedan en `reports/ui-walkthrough/` (no versionado). Sin Electron (`npm run dev:web`) no hay IPC y cada pantalla muestra «El servidor no responde».
+
 La interfaz no tiene acceso a Node: el preload expone solo `window.philips`. Fastify, sincronización P2P y el instalador no están implementados.
 
 - [Guía de validación conjunta](docs/qvac-validation.md)
