@@ -142,4 +142,5 @@ Propietaria, todos los derechos reservados. Ver [LICENSE](LICENSE). Los jurados 
 
 ## Equipo
 
-Ricardo Solís Arias · Marco · Abraham · Sebastián
+Ricardo Solís Arias · Marco Gomez Mendez · Abraham Solano Parrales · Sebastián Granados Artavia
+
