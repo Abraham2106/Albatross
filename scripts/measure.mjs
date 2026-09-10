@@ -62,13 +62,18 @@ async function loadDomain() {
   return { path: entry, mod };
 }
 
+const LANG = process.argv.includes('--es') ? 'es' : 'en';
+const REPORT = LANG === 'es' ? 'REPORT.es.md' : 'REPORT.md';
+
 const MODALITY_ALIASES = { MRI: 'MR', SCANNER: 'CT', US: 'Ultrasound', ULTRASOUND: 'Ultrasound' };
+const AGE_ALIASES = { viejo: 'old', vieja: 'old', viejos: 'old', viejas: 'old', antiguo: 'old', 'muy viejo': 'very old', 'muy viejos': 'very old', nuevo: 'new', nueva: 'new', nuevos: 'new', nuevas: 'new', 'mas nuevo': 'newer', 'mas nuevos': 'newer', reciente: 'recent', recientes: 'recent', recientemente: 'recent', 'instalado recientemente': 'recent' };
 const normModality = (m) => {
   if (typeof m !== 'string') return null;
   const up = m.trim().toUpperCase();
   return MODALITY_ALIASES[up] ?? m.trim();
 };
-const normText = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : v ?? null);
+const normText = (v) => (typeof v === 'string' ? v.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '') : v ?? null);
+const normAge = (v) => { const t = normText(v); return typeof t === 'string' ? AGE_ALIASES[t] ?? t : t; };
 
 /** Candidatos del contrato InferenceEngine -> filas comparables del fixture. */
 function toRows(data) {
@@ -115,7 +120,7 @@ function compare(field, expected, row) {
   const got = pick(row, field);
   if (field === 'edad' && expected.edad === null && expected.edad_cualitativa !== null) {
     // Edad cualitativa: no hay numero correcto. Acierta quien no inventa uno.
-    return got === null || normText(got) === normText(expected.edad_cualitativa) ? 'ok' : 'relleno';
+    return got === null || normAge(got) === normAge(expected.edad_cualitativa) ? 'ok' : 'relleno';
   }
   const want = field === 'modalidad' ? normModality(expected[field]) : expected[field];
   const have = field === 'modalidad' ? normModality(got) : got;
@@ -160,7 +165,7 @@ async function main() {
     try {
       const out = await engine.extractObservations({
         hospitalId: `case-${testCase.id}`,
-        transcript: testCase.en,
+        transcript: testCase[LANG] || testCase.en,
       });
       emitted = toRows(out.data);
     } catch (e) {
@@ -187,8 +192,8 @@ async function main() {
 
     if (domain?.mod) {
       // El enunciado es el texto crudo del que el dominio infiere certeza y estado.
-      const st = domain.mod.deriveStatus('Voice', testCase.en);
-      const cf = domain.mod.deriveConfidence(testCase.en);
+      const st = domain.mod.deriveStatus('Voice', testCase[LANG] || testCase.en);
+      const cf = domain.mod.deriveConfidence(testCase[LANG] || testCase.en);
       for (let i = 0; i < emitted.length; i += 1) {
         statusDist.set(st, (statusDist.get(st) ?? 0) + 1);
         confidenceDist.set(cf, (confidenceDist.get(cf) ?? 0) + 1);
@@ -221,6 +226,7 @@ async function main() {
 Generado por \`scripts/measure.mjs\` el ${new Date().toISOString()}.
 
 - Adaptador activo: \`ALBATROSS_ADAPTER=${ADAPTER}\`
+- Idioma del dictado: \`${LANG}\`
 - Referencia: \`fixtures/voice-tests.json\` (hoja **${fixture.fuente.hoja}** de \`${fixture.fuente.archivo}\`)
 - Casos: ${total}
 - Dominio: ${domain?.mod ? `\`${domain.path}\`` : '`src/domain/` no disponible'}
@@ -270,9 +276,9 @@ ${dist(statusDist, 'Status')}
 ${dist(confidenceDist, 'Confidence')}
 `;
 
-  writeFileSync(fileURLToPath(rel('REPORT.md')), report, 'utf8');
-  console.log(`REPORT.md escrito · adaptador ${ADAPTER} · ${total} casos · ${emitidas}/${esperadas} filas · relleno ${pct(conRelleno, total)}`);
-  if (conError > 0) console.log(`${conError} de ${total} casos fallaron en el adaptador; el detalle esta en REPORT.md.`);
+  writeFileSync(fileURLToPath(rel(REPORT)), report, 'utf8');
+  console.log(`${REPORT} escrito · ${LANG} · adaptador ${ADAPTER} · ${total} casos · ${emitidas}/${esperadas} filas · relleno ${pct(conRelleno, total)}`);
+  if (conError > 0) console.log(`${conError} de ${total} casos fallaron en el adaptador; el detalle esta en ${REPORT}.`);
   await engine.close?.();
 }
 
