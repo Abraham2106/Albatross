@@ -148,3 +148,21 @@ test('failed extraction cannot earn exact groups from a partial output', () => {
   assert.equal(summary.emitted, 0);
   assert.equal(summary.fields.cantidad.exact, 0);
 });
+
+test('a concrete brand or model against an Unknown reference is invention, silence is a miss', () => {
+  const four = fixture.casos[3], ten = fixture.casos[9];
+  assert.equal(compare('marca', four.expected[0], { ...four.expected[0], marca: 'Zenith MedTech' }), 'relleno');
+  assert.equal(compare('marca', four.expected[0], { ...four.expected[0], marca: null }), 'miss');
+  assert.equal(compare('modelo', ten.expected[0], { ...ten.expected[0], modelo: 'AH-MR 650' }), 'relleno');
+  const honest = summarize([resultFor(four.expected, four.expected), resultFor(ten.expected, ten.expected)]);
+  assert.equal(honest.brandFillCases, 0);
+  assert.equal(honest.brandModelFillCases, 0);
+  const inventor = summarize([
+    resultFor(four.expected, four.expected.map(r => ({ ...r, marca: 'Zenith MedTech' }))),
+    resultFor(ten.expected, ten.expected.map(r => ({ ...r, modelo: 'AH-MR 650' }))),
+  ]);
+  assert.equal(inventor.brandFillCases, 1);
+  assert.equal(inventor.brandModelFillCases, 2);
+  const unknownExtra = summarize([resultFor(four.expected, [...four.expected, { ...four.expected[0], modalidad: 'Ultrasound' }])]);
+  assert.equal(unknownExtra.brandFillCases, 0);
+});

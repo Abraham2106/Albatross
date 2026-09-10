@@ -45,7 +45,7 @@ ${s.cases} dictados de texto; no mide Whisper ni audio. Modelos locales, prompt 
 
 ## Metricas de grupos
 
-Un grupo exacto coincide en los ${FIELDS.length} campos evaluados. Precision = exactos/emitidos; cobertura = exactos/esperados. Una fila con atributos incorrectos penaliza ambas. Extra significa fila sin pareja, no todos los falsos positivos.
+Un grupo exacto coincide en los ${FIELDS.length} campos evaluados. Precision = exactos/emitidos; cobertura = exactos/esperados. Una fila con atributos incorrectos penaliza ambas. Extra significa fila sin pareja, no todos los falsos positivos. Una marca inventada es una marca concreta donde la referencia es null (no mencionada) o Unknown (el hablante dijo no saberla); el objetivo es cero.
 
 | Metrica | Valor |
 | --- | ---: |
@@ -59,6 +59,7 @@ Un grupo exacto coincide en los ${FIELDS.length} campos evaluados. Precision = e
 | Fallos del adaptador | ${pct(s.errors, s.cases)} |
 | Truncamientos notificados (stopReason=length) | ${s.truncations} |
 | Casos sin motivo de parada informado por el SDK | ${s.unknownStopReasons} |
+| Casos con marca inventada (referencia null o Unknown; casos 4, 6 y 10 la ejercitan) | ${pct(s.brandFillCases, s.cases)} |
 | Casos con relleno de marca/modelo segun referencia | ${pct(s.brandModelFillCases, s.cases)} |
 | Latencia p50 / p95 (exitos, n=${s.latency.samples}) | ${ms(s.latency.p50)} / ${ms(s.latency.p95)} ms |
 

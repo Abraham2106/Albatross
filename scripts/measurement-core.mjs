@@ -51,7 +51,8 @@ export function compare(field, expected, row) {
   if (got === null) return 'miss';
   if (typeof want === 'number') return Number(got) === want ? 'exact' : 'miss';
   if (typeof want === 'boolean') return got === want ? 'exact' : 'miss';
-  return normText(got) === normText(want) ? 'exact' : 'miss';
+  if (normText(got) === normText(want)) return 'exact';
+  return normText(want) === 'unknown' ? 'relleno' : 'miss';
 }
 
 // Rectangular Hungarian assignment: polynomial even at the contract limit of 50 rows.
@@ -124,6 +125,7 @@ export function evaluateCase(expected, emitted, error = null) {
   return { pairs, extra, differences, exactRows,
     exact: !error && !differences.length && !extra.length,
     missing: pairs.filter(p => !p.emitted).length,
+    brandFill: differences.some(d => d.field === 'marca' && d.verdict === 'relleno') || extra.some(r => r.marca != null && normText(r.marca) !== 'unknown'),
     brandModelFill: differences.some(d => ['marca', 'modelo'].includes(d.field) && d.verdict === 'relleno')
       || extra.some(r => r.marca != null || r.modelo != null) };
 }
@@ -156,6 +158,7 @@ export function summarize(results) {
     errors: results.filter(r => r.error).length,
     truncations: results.filter(r => r.trace?.result?.stopReason === 'length').length,
     unknownStopReasons: results.filter(r => !r.trace?.result?.stopReason).length,
+    brandFillCases: results.filter(r => r.evaluation.brandFill).length,
     brandModelFillCases: results.filter(r => r.evaluation.brandModelFill).length,
     latency: { samples: success.length, p50: quantile(success.map(r => r.latencyMs), .5), p95: quantile(success.map(r => r.latencyMs), .95) }, fields };
 }
