@@ -4,6 +4,7 @@ import type { QvacClient, RequestRun } from '../../src/adapters/inference/qvac/s
 import { candidate } from '../helpers/inference';
 import { pcmToWav, wavToPcm } from '../../src/application/audio';
 import { validateExtraction } from '../../src/application/validation';
+import { coerceExtraction } from '../../src/adapters/inference/qvac/parse-output';
 
 const transcript = 'Vi dos CT.';
 const payload = () => ({ mentionedHospital: { name: null, city: null, country: null, evidence: null }, candidates: [candidate('CT', 2, 'dos CT')] });
@@ -76,6 +77,14 @@ describe('QVAC adapter without a real runtime or models', () => {
     expect(output.data.candidates[0]).toMatchObject({ brand: null, model: 'Unknown' });
     expect(output.data.mentionedHospital).toMatchObject({ city: null, country: null });
     await engine.close();
+  });
+  it('never converts qualitative age to years or marks an absent age approximate', () => {
+    const result = coerceExtraction({ mentionedHospital: {}, candidates: [{
+      modality: 'CT', scope: 'group', quantity: null, brand: null, model: null,
+      ageYears: 9, ageDescription: 'old', quantityApproximate: true,
+      ageApproximate: true, unknownFields: [], evidence: 'CT viejo',
+    }] }, 'a', 'CT viejo');
+    expect(result.candidates[0]).toMatchObject({ quantity: null, quantityApproximate: false, ageYears: null, ageDescription: 'old', ageApproximate: false });
   });
   it('retries a failed load without caching its failure', async () => {
     const client = clientMock();

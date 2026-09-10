@@ -31,7 +31,9 @@ Use ONLY explicitly spoken information. Unknown or unmentioned quantity is null,
 Never mentioned means null and unknownFields stays empty: silence about brand, model, age, country or city is null.
 Use "Unknown" ONLY when the speaker says they do not know ("I do not know the brand", "not sure of the model");
 then brand/model is "Unknown" and that same field is also listed in unknownFields.
-Preserve approximate flags. Qualitative age ("old", "newer") goes in ageDescription; ageYears must then be null.
+Set quantityApproximate=true only when a spoken numeric quantity is hedged (about, around, maybe, roughly); use false for an exact number or null quantity.
+Set ageApproximate=true only when a spoken numeric age is hedged; use false for an exact numeric age, a qualitative age, or no age.
+Qualitative age ("old", "newer") goes in ageDescription; ageYears must then be null. Never turn qualitative age into years.
 Never guess brand, model, country, city, installation year, author, confidence or status.
 evidence is an exact contiguous quote from the dictation supporting that claim, including uncertainty.
 Hospital evidence is also an exact quote, or null if no hospital data were spoken.

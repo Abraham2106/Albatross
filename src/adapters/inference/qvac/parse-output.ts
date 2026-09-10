@@ -107,7 +107,10 @@ function coerceCandidate(raw: unknown, transcript: string): ObservationCandidate
   const evidence = alignEvidence(transcript, quoted) ?? fallbackEvidence(transcript, quoted || modality);
   let ageYears = coerceNumber(v.ageYears, 100);
   let ageDescription = coerceNullString(v.ageDescription);
-  if (ageYears !== null && ageDescription !== null) ageDescription = null;
+  // A qualitative assertion must never be converted into a numeric age. If a
+  // small model emits both representations, retain the literal description;
+  // keeping its number would turn "old" into an unsupported number of years.
+  if (ageYears !== null && ageDescription !== null) ageYears = null;
   const unknownFields = coerceUnknown(v.unknownFields);
   const declared = (value: string | null, field: 'brand' | 'model') =>
     value === 'Unknown' && !unknownFields.includes(field) ? null : value;
@@ -117,7 +120,8 @@ function coerceCandidate(raw: unknown, transcript: string): ObservationCandidate
   const result: ObservationCandidate = {
     modality, scope: v.scope === 'group' ? 'group' : 'total',
     quantity, brand, model, ageYears, ageDescription,
-    quantityApproximate: coerceBool(v.quantityApproximate), ageApproximate: coerceBool(v.ageApproximate),
+    quantityApproximate: quantity === null ? false : coerceBool(v.quantityApproximate),
+    ageApproximate: ageYears === null ? false : coerceBool(v.ageApproximate),
     unknownFields, evidence,
   };
   return {
