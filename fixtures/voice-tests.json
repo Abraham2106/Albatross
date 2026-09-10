@@ -311,5 +311,88 @@
       ],
       "nota": "REVISAR. La instruccion recibida pedia marca y modelo 'Unknown' para este caso, pero el enunciado nombra la marca ('I know the brand is Aurelia Health') y la columna Expected Structured Output de la hoja tambien la da: 'MR=2 | Aurelia Health | Model=Unknown'. Solo el modelo es Unknown. Se dejo marca = 'Aurelia Health' por coherencia con la hoja, que es la referencia declarada. Si la intencion era marca Unknown, cambiar aqui y en ningun otro lugar. La fila 20 de la semilla coincide en la marca pero inventa el modelo AH-MR 650, que el enunciado niega conocer."
     }
-  ]
+  ],
+  "casos_propios": {
+    "origen": "Escritos por el equipo Albatross durante el hackathon, NO por Philips. No forman parte de la hoja Voice Test Prompts ni entran en scripts/measure.mjs, que solo lee 'casos'. Los consume tests/contracts/derived-values.test.ts.",
+    "por_que": "Los diez enunciados de Philips solo producen Status Reported/Estimated y Confidence High/Medium, siempre con Source Voice. Estos casos ejercitan Confirmed, Unknown, Low y una fuente distinta de Voice. Status, Confidence y Estimated Installation Year los calcula src/domain (deriveStatus, deriveConfidence, computeGroupStatus, computeGroupConfidence); el esquema JSON impuesto al modelo no los contiene.",
+    "casos": [
+      {
+        "id": "A1",
+        "ejercita": "Status Confirmed por corroboracion de dos observadores sobre la misma modalidad y cliente",
+        "cliente": "Hospital DemoCare Pacific",
+        "modalidad": "MR",
+        "observaciones": [
+          {
+            "autor": "Sales User 01",
+            "fecha": "2026-09-10T09:00:00.000Z",
+            "canal": "Voice",
+            "cantidad": 2,
+            "en": "They have two MR systems.",
+            "es": "Tienen dos sistemas MR."
+          },
+          {
+            "autor": "Sales User 02",
+            "fecha": "2026-09-10T11:30:00.000Z",
+            "canal": "Voice",
+            "cantidad": 2,
+            "en": "I also saw two MR systems there.",
+            "es": "Yo tambien vi dos sistemas MR ahi."
+          }
+        ],
+        "expected": {
+          "status": "Confirmed",
+          "confidence": "High",
+          "observadores": 2
+        }
+      },
+      {
+        "id": "A2",
+        "ejercita": "Status Unknown por campo obligatorio (cantidad) no obtenido tras la pregunta de seguimiento",
+        "cliente": "Clinica DemoCare Light",
+        "modalidad": "Ultrasound",
+        "pregunta": {
+          "en": "How many ultrasound units do they have?",
+          "es": "Cuantos equipos de ultrasonido tienen?"
+        },
+        "respuesta": {
+          "en": "I do not know how many.",
+          "es": "No se cuantos."
+        },
+        "canal": "Voice",
+        "expected": {
+          "status": "Unknown",
+          "confidence": "Low"
+        }
+      },
+      {
+        "id": "A3",
+        "ejercita": "Confidence Low por observacion con solo modalidad y cantidad, sin texto del observador",
+        "cliente": "Centro Medico DemoCare Valley",
+        "modalidad": "CT",
+        "cantidad": 1,
+        "canal": "Manual",
+        "expected": {
+          "status": "Unknown",
+          "confidence": "Low",
+          "marca": "Unknown",
+          "modelo": "Unknown"
+        }
+      },
+      {
+        "id": "A4",
+        "ejercita": "Source distinto de Voice: alta manual con texto del observador",
+        "cliente": "Hospital DemoCare North",
+        "modalidad": "X-Ray",
+        "cantidad": 1,
+        "canal": "Manual",
+        "en": "One X-Ray unit in the emergency room.",
+        "es": "Un equipo de rayos X en urgencias.",
+        "expected": {
+          "status": "Reported",
+          "confidence": "High",
+          "source": "Manual"
+        }
+      }
+    ]
+  }
 }
