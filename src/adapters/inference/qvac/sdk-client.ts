@@ -3,6 +3,19 @@ import { join } from 'node:path';
 import { LLM_FILE, STT_FILE } from './model-pack';
 
 type CompletionParams = Parameters<typeof import('@qvac/sdk')['completion']>[0];
+type CompletionFinal = Awaited<ReturnType<typeof import('@qvac/sdk')['completion']>['final']>;
+export interface CompletionTrace {
+  requestId: string;
+  params: CompletionParams;
+  result: CompletionFinal;
+}
+export interface BackendTrace {
+  operation: string;
+  selectedBackend: string;
+  selectedDevice: 'cpu' | 'gpu';
+  graphicsApi?: string;
+  fallback?: { requestedDevice?: 'cpu' | 'gpu'; reason: string };
+}
 export interface RequestRun<T> { requestId: string; final: Promise<T> }
 export interface QvacClient {
   load(capability: 'stt' | 'llm', source?: string): RequestRun<string>;
@@ -16,9 +29,16 @@ function localWeight(file: string): string | undefined {
   const candidate = join(process.cwd(), 'models', file);
   return existsSync(candidate) ? candidate : undefined;
 }
-export async function createSdkClient(onProgress: (message: string) => void): Promise<QvacClient> {
+export async function createSdkClient(onProgress: (message: string) => void, onCompletion?: (trace: CompletionTrace) => void, onBackend?: (trace: BackendTrace) => void): Promise<QvacClient> {
   // Importing the adapter does not start QVAC; this boundary is reached only after opt-in.
   const sdk = await import('@qvac/sdk');
+  sdk.profiler.enable({ mode: 'verbose', includeServerBreakdown: true });
+  const unsubscribeBackend = sdk.profiler.onRecord(event => {
+    const backend = event.backend;
+    if (!backend) return;
+    onBackend?.({ operation: event.op, selectedBackend: backend.selectedBackend, selectedDevice: backend.selectedDevice, graphicsApi: backend.graphicsApi, fallback: backend.fallback });
+    onProgress(`QVAC ${event.op}: ${backend.selectedDevice.toUpperCase()} · ${backend.selectedBackend}${backend.graphicsApi ? ` · ${backend.graphicsApi}` : ''}${backend.fallback ? ` · fallback: ${backend.fallback.reason}` : ''}`);
+  });
   return {
     load(capability, source) {
       const onDownload = (p: { percentage?: number }) => onProgress('Preparando modelo ' + capability + (p.percentage === undefined ? '' : ': ' + Math.round(p.percentage) + '%'));
@@ -55,10 +75,13 @@ export async function createSdkClient(onProgress: (message: string) => void): Pr
         responseFormat: { type: 'json_schema', json_schema: { name: 'philips', schema } },
       } satisfies CompletionParams;
       const run = sdk.completion(params);
-      return { requestId: run.requestId, final: run.final.then(value => value.contentText) };
+      return { requestId: run.requestId, final: run.final.then(value => {
+        onCompletion?.({ requestId: run.requestId, params, result: value });
+        return value.contentText;
+      }) };
     },
     cancel: requestId => sdk.cancel({ requestId }),
     unload: modelId => sdk.unloadModel({ modelId, clearStorage: false, autoClose: false }),
-    close: () => sdk.close(),
+    close: async () => { unsubscribeBackend(); sdk.profiler.disable(); await sdk.close(); },
   };
 }

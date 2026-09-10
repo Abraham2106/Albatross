@@ -3,7 +3,7 @@ import { checkCancelled, record, text, validateExtraction } from '../../../appli
 import { wavToPcm } from '../../../application/audio';
 import { EXTRACTION_PROMPT, EXTRACTION_SCHEMA } from './schema';
 import { coerceExtraction, parseModelJson } from './parse-output';
-import { createSdkClient, type QvacClient, type RequestRun } from './sdk-client';
+import { createSdkClient, type BackendTrace, type QvacClient, type RequestRun } from './sdk-client';
 
 export interface QvacOptions {
   enabled?: boolean;
@@ -12,6 +12,7 @@ export interface QvacOptions {
   timeoutMs?: number;
   loadTimeoutMs?: number;
   onProgress?: (message: string) => void;
+  onBackend?: (trace: BackendTrace) => void;
   clientFactory?: () => Promise<QvacClient>;
 }
 export class QvacInferenceEngine implements InferenceEngine {
@@ -80,7 +81,7 @@ export class QvacInferenceEngine implements InferenceEngine {
     options.signal?.addEventListener('abort', abort, { once: true });
     const pending = (async () => {
       try {
-        this.client ??= (this.options.clientFactory ?? (() => createSdkClient(m => this.options.onProgress?.(m))))().catch(error => { this.client = undefined; throw error; });
+        this.client ??= (this.options.clientFactory ?? (() => createSdkClient(m => this.options.onProgress?.(m), undefined, trace => this.options.onBackend?.(trace))))().catch(error => { this.client = undefined; throw error; });
         const client = await this.client;
         checkCancelled(controller.signal);
         const id = await this.model(client, capability, controller.signal);
