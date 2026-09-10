@@ -55,6 +55,25 @@ export const obtenerResumen = (pais) => conDesktop('resumen', pais ? [pais] : []
 
 export const hayEscritorio = () => !!desktop();
 
+export const transcribir = (audio) => {
+  const api = desktop();
+  lastRequestId = crypto.randomUUID();
+  if (!api?.transcribir) throw new Error('SIN_BACKEND');
+  return viaDesktop(() => api.transcribir(lastRequestId, audio));
+};
+
+export const abrirWav = () => {
+  const api = desktop();
+  if (!api?.openWav) throw new Error('SIN_BACKEND');
+  return viaDesktop(() => api.openWav());
+};
+
+export const abrirVentanaWhisper = () => {
+  const api = desktop();
+  if (!api?.openWhisperWindow) throw new Error('SIN_BACKEND');
+  return viaDesktop(() => api.openWhisperWindow());
+};
+
 export const extraer = (texto, audio) => {
   const api = desktop();
   lastRequestId = crypto.randomUUID();

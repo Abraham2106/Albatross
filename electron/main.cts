@@ -1,5 +1,5 @@
 import './hide-bare-console.cjs';
-import { app, BrowserWindow, ipcMain, screen, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen, type IpcMainInvokeEvent } from 'electron';
 import { pinNvidiaGpu } from '../src/adapters/inference/qvac/prefer-nvidia';
 import * as path from 'node:path';
 import { NetworkAudit } from '../src/application/network-audit';
@@ -7,10 +7,12 @@ import * as fs from 'node:fs';
 import { createRuntime } from '../src/bootstrap/desktop';
 import { InferenceError } from '../src/application/ports/inference-engine';
 import { text, record, invalid } from '../src/application/validation';
-import { asAudioBytes } from '../src/application/audio';
+import { asAudioBytes, wavToPcm } from '../src/application/audio';
+import { pcmDurationMs } from '../src/application/whisper-metrics';
 import type { ProcessVisitInput, ReviewInput } from '../src/application/visits';
 import type { Result } from '../src/application/desktop-api';
 import type { TranscriptionRequest } from '../src/application/ports/inference-engine';
+import { developmentToolsEnabled, requireDevelopmentTools } from '../src/application/development-tools';
 
 const smokeTest = process.argv.includes('--smoke-test');
 if (smokeTest) {
@@ -22,8 +24,10 @@ if (smokeTest) {
   app.commandLine.appendSwitch('force_high_performance_gpu');
 }
 const devUrl = process.env.VITE_DEV_SERVER_URL;
+const developmentTools = developmentToolsEnabled(app.isPackaged, devUrl, smokeTest);
 const networkAudit = new NetworkAudit(devUrl ? new URL(devUrl).origin : undefined);
 let mainWindow: BrowserWindow | null = null;
+let whisperWindow: BrowserWindow | null = null;
 let runtime: ReturnType<typeof createRuntime> | undefined;
 let active: { id: string; controller: AbortController; sender: Electron.WebContents } | undefined;
 let quitting = false;
@@ -53,7 +57,8 @@ function appContents(contents: Electron.WebContents | null) {
   try {
     if (contents.isDestroyed()) return false;
     const main = liveContents(mainWindow);
-    return main !== null && contents === main;
+    const whisper = liveContents(whisperWindow);
+    return (main !== null && contents === main) || (whisper !== null && contents === whisper);
   } catch {
     return false;
   }
@@ -107,6 +112,25 @@ function setupHandlers() {
     texto: typeof v.texto === 'string' ? v.texto : undefined,
     audio: v.audio && typeof v.audio === 'object' ? audioRequest(v.audio as Record<string, unknown>) : undefined,
   }, { signal })));
+  handle('transcribir', (value, event) => {
+    requireDevelopmentTools(developmentTools);
+    return operation(event, value, (v, signal) => runtime!.cib.transcribir(audioRequest(v), { signal }));
+  });
+  handle('open-wav', async (_value, event) => {
+    requireDevelopmentTools(developmentTools);
+    const parent = BrowserWindow.fromWebContents(event.sender) ?? mainWindow;
+    const options = {
+      title: 'Abrir WAV para Whisper',
+      filters: [{ name: 'WAV PCM 16 kHz', extensions: ['wav'] }],
+      properties: ['openFile' as const],
+    };
+    const picked = parent ? await dialog.showOpenDialog(parent, options) : await dialog.showOpenDialog(options);
+    if (picked.canceled || !picked.filePaths[0]) return null;
+    const bytes = new Uint8Array(fs.readFileSync(picked.filePaths[0]));
+    const pcm = wavToPcm(bytes);
+    return { name: path.basename(picked.filePaths[0]), audio: bytes, mimeType: 'audio/wav' as const, audioMs: pcmDurationMs(pcm.byteLength) };
+  });
+  handle('open-whisper-window', () => openWhisperWindow());
   handle('confirmar', value => runtime!.cib.confirmar(value));
   handle('models', () => runtime!.models());
   handle('download-models', (value, event) => operation(event, value, (_input, signal) => runtime!.downloadModels(signal)));
@@ -139,11 +163,71 @@ function allowMicrophone(window: BrowserWindow) {
     } catch { callback(false); }
   });
 }
-async function loadRenderer(window: BrowserWindow) {
+async function loadRenderer(window: BrowserWindow, hash?: string) {
   if (devUrl) {
     if (devUrl !== 'http://127.0.0.1:5187') throw new Error('Unexpected development URL');
-    await window.loadURL(devUrl);
-  } else await window.loadFile(filePath);
+    await window.loadURL(hash ? `${devUrl}#${hash}` : devUrl);
+  } else if (hash) await window.loadFile(filePath, { hash });
+  else await window.loadFile(filePath);
+}
+function restoreWhisperBounds() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(boundsPath('whisper-window-bounds.json'), 'utf8')) as { x: number; y: number; width: number; height: number };
+    const area = screen.getDisplayMatching(raw).workArea;
+    if (raw.width >= 640 && raw.height >= 520
+      && raw.x < area.x + area.width - 80
+      && raw.y < area.y + area.height - 80
+      && raw.x + raw.width > area.x + 80) return raw;
+  } catch { /* primera vez */ }
+  return { width: 920, height: 720 };
+}
+async function openWhisperWindow() {
+  requireDevelopmentTools(developmentTools);
+  if (liveContents(whisperWindow) && whisperWindow) { whisperWindow.show(); whisperWindow.focus(); return; }
+  const window = new BrowserWindow({
+    ...restoreWhisperBounds(),
+    minWidth: 640, minHeight: 520, show: false,
+    title: 'Velocidad de Whisper',
+    backgroundColor: '#0c1114',
+    parent: mainWindow ?? undefined,
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true,
+      devTools: developmentTools, additionalArguments: developmentTools ? ['--philips-development-tools'] : [] },
+  });
+  whisperWindow = window;
+  window.on('close', () => abortIfSender(window));
+  window.on('closed', () => { whisperWindow = null; });
+  const persist = () => {
+    if (window.isDestroyed() || window.isMinimized()) return;
+    try { fs.writeFileSync(boundsPath('whisper-window-bounds.json'), JSON.stringify(window.getBounds())); } catch { /* ignore */ }
+  };
+  window.on('resized', persist);
+  window.on('moved', persist);
+  hardenContents(window);
+  allowMicrophone(window);
+  await loadRenderer(window, 'whisper');
+  if (window.isDestroyed()) return;
+  window.show();
+  window.focus();
+}
+function installMenu() {
+  const template: Electron.MenuItemConstructorOptions[] = [
+    ...(process.platform === 'darwin' ? [{ role: 'appMenu' as const }] : []),
+    { role: 'fileMenu' },
+    { role: 'editMenu' },
+    ...(developmentTools ? [{ role: 'viewMenu' as const }] : [{ label: 'Ver', submenu: [
+      { role: 'reload' as const }, { role: 'forceReload' as const }, { type: 'separator' as const },
+      { role: 'resetZoom' as const }, { role: 'zoomIn' as const }, { role: 'zoomOut' as const },
+      { type: 'separator' as const }, { role: 'togglefullscreen' as const },
+    ] }]),
+    ...(developmentTools ? [{
+      label: 'Herramientas',
+      submenu: [
+        { label: 'Velocidad de Whisper', accelerator: 'CmdOrCtrl+Shift+W', click: () => { void openWhisperWindow(); } },
+      ],
+    }] : []),
+    { role: 'windowMenu' },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 function restoreBounds() {
   try {
@@ -162,7 +246,8 @@ async function createWindow() {
     ...restoreBounds(),
     minWidth: 430, minHeight: 640, show: !smokeTest,
     backgroundColor: '#0c1114',
-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true },
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true,
+      devTools: developmentTools, additionalArguments: developmentTools ? ['--philips-development-tools'] : [] },
   });
   mainWindow = window;
   window.webContents.session.webRequest.onBeforeRequest((details, callback) => {
@@ -202,6 +287,16 @@ async function createWindow() {
       return { nodeExposed: typeof window.require !== 'undefined', mode: status.data?.mode, modelsEnabled: status.data?.modelsEnabled, sites: list.data?.sites.length };
     })()`);
     if (result.nodeExposed || result.mode !== 'qvac' || result.modelsEnabled || result.sites !== 0) throw new Error('IPC/UI smoke failed');
+    const diagnosticExposure = await window.webContents.executeJavaScript(`({
+      enabled: window.philips.developmentTools,
+      api: typeof window.philips.openWhisperWindow !== 'undefined' || typeof window.philips.transcribir !== 'undefined' || typeof window.philips.openWav !== 'undefined',
+      timers: !!document.querySelector('.pipeline-tiempos, .pipeline-cargas'),
+      button: document.body.innerText.includes('Medir velocidad de Whisper'),
+      pipeline: !!document.querySelector('.pipeline')
+    })`);
+    if (diagnosticExposure.enabled || diagnosticExposure.api || diagnosticExposure.timers || diagnosticExposure.button || !diagnosticExposure.pipeline) throw new Error('Development tools leaked into production');
+    await window.loadFile(filePath, { hash: 'whisper' });
+    await waitFor("!!document.querySelector('[data-testid=cib-nav-captura]')");
     await window.webContents.executeJavaScript("document.querySelector('[data-testid=cib-nav-hospitales]').click()");
     await delay(200);
     fs.writeFileSync(path.join(screenshotDir, 'profile-desktop.png'), (await window.webContents.capturePage()).toPNG());
@@ -233,6 +328,7 @@ app.whenReady().then(async () => {
       }
     },
     !smokeTest);
+  if (!smokeTest) installMenu();
   setupHandlers(); await createWindow();
 }).catch(error => { console.error(error); app.exit(1); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin' || smokeTest) app.quit(); });

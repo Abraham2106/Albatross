@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopApi } from '../src/application/desktop-api';
+const developmentTools = process.argv.includes('--philips-development-tools');
 const api: DesktopApi = {
+  developmentTools,
   status: () => ipcRenderer.invoke('philips:status'),
   list: () => ipcRenderer.invoke('philips:list'),
   profile: id => ipcRenderer.invoke('philips:profile', id),
@@ -15,6 +17,11 @@ const api: DesktopApi = {
   geo: () => ipcRenderer.invoke('philips:geo'),
   resumen: pais => ipcRenderer.invoke('philips:resumen', pais),
   extraer: (requestId, input) => ipcRenderer.invoke('philips:extraer', { requestId, ...input }),
+  ...(developmentTools ? {
+    transcribir: (requestId: string, input: Parameters<NonNullable<DesktopApi['transcribir']>>[1]) => ipcRenderer.invoke('philips:transcribir', { requestId, ...input }),
+    openWav: () => ipcRenderer.invoke('philips:open-wav'),
+    openWhisperWindow: () => ipcRenderer.invoke('philips:open-whisper-window'),
+  } : {}),
   confirmar: input => ipcRenderer.invoke('philips:confirmar', input),
   models: () => ipcRenderer.invoke('philips:models'),
   downloadModels: requestId => ipcRenderer.invoke('philips:download-models', { requestId }),

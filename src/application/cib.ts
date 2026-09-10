@@ -30,6 +30,7 @@ export interface CibItem {
   campos: { modalidad: string; cantidad: number | null; marca: string | null; modelo: string | null; edad: number | null };
 }
 export interface CibObservacion {
+  timings?: VisitDraft['timings'];
   observacionId: string; clienteId: string; cliente: string; textoOriginal: string;
   items: CibItem[]; conflictos: { campo: string; mensaje: string }[];
 }
@@ -179,6 +180,7 @@ export function toObservacion(draft: VisitDraft): CibObservacion {
   ];
   return {
     observacionId: draft.id, clienteId: draft.site.id, cliente: draft.site.name, textoOriginal: draft.transcript,
+    timings: draft.timings,
     items: draft.extraction.candidates.map((c, i) => ({
       id: itemId(draft.id, i), resumen: summarizeCandidate(c), estadoSugerido: suggestedStatus(c),
       campos: { modalidad: c.modality, cantidad: c.quantity, marca: c.brand, modelo: c.model, edad: c.ageYears },

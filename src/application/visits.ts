@@ -4,6 +4,8 @@ import { InferenceError, type InferenceEngine, type OperationOptions, type Obser
 import type { HospitalInput, VisitDraft, VisitRepository } from './ports/visit-repository';
 import { checkCancelled, invalid, record, text, validateCandidate } from './validation';
 import { applyRespuestas, resolveHospital, type CibRespuesta } from './cib';
+import { wavToPcm } from './audio';
+import { summarizeWhisperSpeed, type WhisperSpeedResult } from './whisper-metrics';
 
 export interface ProcessVisitInput {
   hospital: HospitalInput;
@@ -53,11 +55,26 @@ export class VisitService {
     if (input.audio && input.transcript) invalid('Envía audio o texto, no ambos.');
     if (input.audio) {
       const result = await this.engine.transcribe(input.audio, options);
-      return { transcript: text(result.data.text, 'Transcripción', 12000), transcriptionProvenance: result.provenance, source: 'Voice' as const };
+      return { transcript: text(result.data.text, 'Transcripción', 12000), transcriptionProvenance: result.provenance, transcriptionTiming: result.timing, source: 'Voice' as const };
     }
     return { transcript: text(input.transcript, 'Transcripción', 12000), source: 'Manual' as const };
   }
-  private writeDraft(site: Site, baseRevision: number, transcript: string, result: InferenceResult<ExtractionData>, source: 'Voice' | 'Manual', transcriptionProvenance?: InferenceProvenance, extraWarning?: string) {
+  async transcribeAudio(audio: TranscriptionRequest, options: OperationOptions = {}): Promise<WhisperSpeedResult> {
+    const started = performance.now();
+    const result = await this.engine.transcribe(audio, options);
+    const elapsed = performance.now() - started;
+    return summarizeWhisperSpeed({
+      text: result.data.text,
+      model: result.provenance.model,
+      pcmBytes: wavToPcm(audio.audio).byteLength,
+      loadMs: result.timing?.loadMs ?? 0,
+      inferMs: result.timing?.inferMs ?? elapsed,
+      totalMs: result.timing?.totalMs ?? elapsed,
+      coldStart: result.timing?.coldStart ?? false,
+      backend: result.backend,
+    });
+  }
+  private writeDraft(site: Site, baseRevision: number, transcript: string, result: InferenceResult<ExtractionData>, source: 'Voice' | 'Manual', transcriptionProvenance?: InferenceProvenance, extraWarning?: string, transcriptionTiming?: InferenceResult<unknown>['timing']) {
     const mention = result.data.mentionedHospital;
     const differences = (['name', 'country', 'city'] as const).filter(k => mention[k] && mention[k]!.trim().toLocaleLowerCase() !== site[k].trim().toLocaleLowerCase());
     const identityWarning = extraWarning
@@ -65,6 +82,7 @@ export class VisitService {
     const draft: VisitDraft = {
       id: this.newId(), site, baseRevision, transcript, extraction: { ...result.data, hospitalId: site.id }, provenance: result.provenance,
       ...(transcriptionProvenance ? { transcriptionProvenance } : {}),
+      timings: { transcription: transcriptionTiming, extraction: result.timing },
       createdAt: this.now(), source, status: 'pending',
       ...(identityWarning ? { identityWarning } : {}),
     };
@@ -79,7 +97,7 @@ export class VisitService {
     checkCancelled(options.signal);
     const result = await this.engine.extractObservations({ hospitalId: site.id, transcript: spoken.transcript }, options);
     checkCancelled(options.signal);
-    return this.writeDraft(site, baseRevision, spoken.transcript, result, spoken.source, spoken.transcriptionProvenance);
+    return this.writeDraft(site, baseRevision, spoken.transcript, result, spoken.source, spoken.transcriptionProvenance, undefined, spoken.transcriptionTiming);
   }
   async processFree(input: ProcessFreeInput, options: OperationOptions = {}): Promise<VisitDraft> {
     record(input);
@@ -90,7 +108,7 @@ export class VisitService {
     checkCancelled(options.signal);
     const resolved = resolveHospital(result.data.mentionedHospital, this.repository.listSites());
     const { site, baseRevision } = this.bindHospital(resolved.hospital);
-    return this.writeDraft(site, baseRevision, spoken.transcript, result, spoken.source, spoken.transcriptionProvenance, resolved.identityWarning);
+    return this.writeDraft(site, baseRevision, spoken.transcript, result, spoken.source, spoken.transcriptionProvenance, resolved.identityWarning, spoken.transcriptionTiming);
   }
   accept(input: ReviewInput) {
     record(input);

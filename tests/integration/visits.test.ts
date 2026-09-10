@@ -20,6 +20,23 @@ function setup(filename = ':memory:', engine: InferenceEngine = fakeEngine()) {
 }
 function review(draft: VisitDraft) { return { draftId: draft.id, author: 'Ana', visitedAt: now, candidates: draft.extraction.candidates, identityAcknowledged: true }; }
 describe('dictation, human review and local persistence', () => {
+  it('persists separate transcription and extraction timings for the review', async () => {
+    const base = fakeEngine();
+    const transcription = { loadMs: 1, inferMs: 1250, totalMs: 1251, coldStart: false };
+    const extraction = { loadMs: 300, inferMs: 2700, totalMs: 3000, coldStart: true };
+    const engine = fakeEngine({
+      async transcribe(input, options) { return { ...await base.transcribe(input, options), timing: transcription }; },
+      async extractObservations(input, options) { return { ...await base.extractObservations(input, options), timing: extraction }; },
+    });
+    const { service, repo } = setup(':memory:', engine);
+    const draft = await service.processFree({ audio: { audio: pcmToWav(new Float32Array(16000), 16000), mimeType: 'audio/wav' } });
+    expect(repo.getDraft(draft.id)?.timings).toEqual({ transcription, extraction });
+    const { toObservacion } = await import('../../src/application/cib');
+    expect(toObservacion(draft).timings).toEqual({ transcription, extraction });
+    const typed = await service.processFree({ transcript: TEST_TRANSCRIPT });
+    expect(typed.timings?.transcription).toBeUndefined();
+    expect(typed.timings?.extraction).toEqual(extraction);
+  });
   it('saves a recoverable draft, commits reviewed edits and is idempotent', async () => {
     const { repo, service } = setup();
     const draft = await service.process({ hospital, audio: { audio: pcmToWav(new Float32Array(100), 16000), mimeType: 'audio/wav' } });
@@ -119,5 +136,22 @@ describe('dictation, human review and local persistence', () => {
     const profile = service.confirmCards(draft.id, { [draft.id + ':0']: 'si', [draft.id + ':1']: 'no' });
     expect(profile.site.facts.map(f => f.modality)).toEqual(['CT']);
     expect(service.list().sites).toHaveLength(1);
+  });
+  it('measures whisper speed without writing a draft', async () => {
+    const engine = fakeEngine({
+      async transcribe(input) {
+        await new Promise(resolve => setTimeout(resolve, 30));
+        return fakeEngine().transcribe(input);
+      },
+    });
+    const { service } = setup(':memory:', engine);
+    const audio = pcmToWav(new Float32Array(16000), 16000);
+    const result = await service.transcribeAudio({ audio, mimeType: 'audio/wav' });
+    expect(result.text).toBe(TEST_TRANSCRIPT);
+    expect(result.audioMs).toBe(1000);
+    expect(result.xRealtime).toBeGreaterThan(1);
+    expect(result.words).toBeGreaterThan(0);
+    expect(service.list().drafts).toHaveLength(0);
+    expect(service.list().sites).toHaveLength(0);
   });
 });

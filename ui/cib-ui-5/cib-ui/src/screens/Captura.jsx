@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { extraer, confirmar, descargarModelos, estadoModelos, onProgreso, cancelar, hayEscritorio, precargarModelos } from '../api/client.js';
+import { extraer, confirmar, descargarModelos, estadoModelos, onProgreso, cancelar, hayEscritorio, abrirVentanaWhisper, precargarModelos } from '../api/client.js';
 import Pipeline from '../components/Pipeline.jsx';
+import { DEVELOPMENT_TOOLS } from '../../../../../src/ui/development-tools.ts';
 import { Micro, SinRed, Copia } from '../components/Iconos.jsx';
 import { startRecording } from '../../../../../src/ui/recorder.ts';
 
@@ -203,7 +204,8 @@ export default function Captura({ onListo, onEstado }) {
       <div className="cuerpo captura-cuerpo">
         <Pipeline recording={grabando} seconds={segundos} rms={rms} inputRate={inputRate}
           sttReady={!!pack?.loaded?.stt} warming={warming} showLlm
-          captured={!!audio} processing={cargando} progress={pipelineProgress} review={!!resultado} />
+          captured={!!audio} processing={cargando} progress={pipelineProgress} review={!!resultado}
+          timings={resultado?.timings} />
         {!resultado && (
           <div className="captura-entrada">
             <div className="captura-trabajo">
@@ -285,6 +287,14 @@ export default function Captura({ onListo, onEstado }) {
                     </>
                   )}
                 </div>
+              )}
+
+              {DEVELOPMENT_TOOLS && hayEscritorio() && (
+                <p className="fila-s">
+                  <button type="button" className="btn btn-sec" onClick={() => { void abrirVentanaWhisper(); }}>
+                    Medir velocidad de Whisper
+                  </button>
+                </p>
               )}
 
               <h2>Qué conviene decir</h2>

@@ -2,6 +2,7 @@ import type { ProcessVisitInput, ReviewInput, VisitService } from './visits';
 import type { NetworkAuditReport } from './network-audit';
 import type { CibService } from './cib-service';
 import type { InferenceErrorCode, TranscriptionRequest } from './ports/inference-engine';
+import type { WhisperSpeedResult } from './whisper-metrics';
 export type Result<T> = { ok: true; data: T } | { ok: false; error: { code: InferenceErrorCode; message: string } };
 export interface RuntimeStatus { mode: 'qvac'; modelsEnabled: boolean; message: string }
 export interface ModelPackStatus {
@@ -10,7 +11,14 @@ export interface ModelPackStatus {
   items: readonly { name: string; label: string; file: string; ready: boolean; bytes: number; expected: number }[];
   loaded?: { stt: boolean; llm: boolean };
 }
+export interface OpenWavResult {
+  name: string;
+  audio: Uint8Array;
+  mimeType: 'audio/wav';
+  audioMs: number;
+}
 export interface DesktopApi {
+  readonly developmentTools: boolean;
   status(): Promise<Result<RuntimeStatus>>;
   list(): Promise<Result<ReturnType<VisitService['list']>>>;
   profile(id: string): Promise<Result<ReturnType<VisitService['getProfile']>>>;
@@ -26,6 +34,9 @@ export interface DesktopApi {
   geo(): Promise<Result<ReturnType<CibService['geo']>>>;
   resumen(pais?: string): Promise<Result<ReturnType<CibService['resumen']>>>;
   extraer(requestId: string, input: { texto?: string; audio?: TranscriptionRequest }): Promise<Result<Awaited<ReturnType<CibService['extraer']>>>>;
+  transcribir?(requestId: string, input: TranscriptionRequest): Promise<Result<WhisperSpeedResult>>;
+  openWav?(): Promise<Result<OpenWavResult | null>>;
+  openWhisperWindow?(): Promise<Result<void>>;
   confirmar(input: { observacionId: string; respuestas: Record<string, 'si' | 'no' | 'nose'> }): Promise<Result<ReturnType<CibService['confirmar']>>>;
   models(): Promise<Result<ModelPackStatus>>;
   downloadModels(requestId: string): Promise<Result<ModelPackStatus>>;
