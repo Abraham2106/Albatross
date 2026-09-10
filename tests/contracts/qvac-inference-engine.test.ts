@@ -62,6 +62,21 @@ describe('QVAC adapter without a real runtime or models', () => {
     expect(transcript.toLocaleLowerCase()).toContain(output.data.candidates[0].evidence.toLocaleLowerCase());
     await engine.close();
   });
+  it('keeps "Unknown" only where the speaker declared it', async () => {
+    const client = clientMock();
+    client.complete.mockImplementation(() => resolved(JSON.stringify({
+      mentionedHospital: { name: 'Clinica', city: 'Unknown', country: 'Unknown', evidence: 'Vi dos CT.' },
+      candidates: [{
+        modality: 'CT', scope: 'total', quantity: 2, brand: 'Unknown', model: 'Unknown', ageYears: null,
+        ageDescription: null, quantityApproximate: false, ageApproximate: false, unknownFields: ['model'], evidence: 'dos CT',
+      }],
+    })));
+    const engine = new QvacInferenceEngine({ enabled: true, clientFactory: async () => client });
+    const output = await engine.extractObservations({ hospitalId: 'a', transcript });
+    expect(output.data.candidates[0]).toMatchObject({ brand: null, model: 'Unknown' });
+    expect(output.data.mentionedHospital).toMatchObject({ city: null, country: null });
+    await engine.close();
+  });
   it('retries a failed load without caching its failure', async () => {
     const client = clientMock();
     client.load.mockImplementationOnce(() => ({ requestId: 'failed-load', final: Promise.reject(new Error('offline')) }));

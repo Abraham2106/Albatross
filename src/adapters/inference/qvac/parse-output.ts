@@ -107,8 +107,10 @@ function coerceCandidate(raw: unknown, transcript: string): ObservationCandidate
   let ageDescription = coerceNullString(v.ageDescription);
   if (ageYears !== null && ageDescription !== null) ageDescription = null;
   const unknownFields = coerceUnknown(v.unknownFields);
-  const brand = coerceNullString(v.brand);
-  const model = coerceNullString(v.model);
+  const declared = (value: string | null, field: 'brand' | 'model') =>
+    value === 'Unknown' && !unknownFields.includes(field) ? null : value;
+  const brand = declared(coerceNullString(v.brand), 'brand');
+  const model = declared(coerceNullString(v.model), 'model');
   const quantity = coerceNumber(v.quantity, 100000, true);
   const result: ObservationCandidate = {
     modality, scope: v.scope === 'group' ? 'group' : 'total',
