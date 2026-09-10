@@ -108,6 +108,7 @@ function setupHandlers() {
   handle('cliente', id => runtime!.cib.cliente(text(id, 'Hospital')));
   handle('geo', () => runtime!.cib.geo());
   handle('ejemplo', () => runtime!.cib.cargarEjemplo());
+  handle('consultar', (value, event) => operation(event, value, (v, signal) => runtime!.cib.consultar({ pregunta: v.pregunta, filtro: v.filtro }, { signal })));
   handle('resumen', value => runtime!.cib.resumen(typeof value === 'string' && value.trim() ? value : undefined));
   handle('extraer', (value, event) => operation(event, value, (v, signal) => runtime!.cib.extraer({
     texto: typeof v.texto === 'string' ? v.texto : undefined,

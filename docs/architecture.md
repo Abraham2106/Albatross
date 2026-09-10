@@ -13,7 +13,9 @@
 - Vista de base instalada por cliente y agregación por hospital, ciudad y país.
 - Estados de observación: `Confirmed`, `Reported`, `Estimated` y `Unknown`.
 
-La sincronización entre dispositivos, la captura por foto y las consultas libres sobre el dataset no forman parte de la implementación actual. Son extensiones posibles, no dependencias del flujo mínimo.
+La sincronización entre dispositivos y la captura por foto no forman parte de la implementación actual. Son extensiones posibles, no dependencias del flujo mínimo.
+
+Las consultas en lenguaje natural siguen la misma regla que la extracción: Qwen traduce la pregunta a un filtro JSON cuyos países, ciudades y marcas solo pueden salir de la base guardada, `coerceQueryFilter` descarta toda restricción que la pregunta no nombre (un estado, "viejo", un número), `validateQueryFilter` lo valida y `applyQuery` filtra en código. Quitar una etiqueta vuelve a filtrar sin llamar al modelo; ningún número del resultado sale de Qwen.
 
 ## Restricción de inferencia
 
@@ -118,4 +120,4 @@ Además, `scripts/measure.mjs` ejecuta una medición explícita contra modelos Q
 - Falta una prueba documentada de punta a punta con audio real: micrófono → Whisper local → Qwen local → revisión → SQLite.
 - La precisión de extracción depende del modelo local; antes de la demo se debe ensayar con frases representativas y revisar las tarjetas antes de guardar.
 - No hay empaquetador o instalador de distribución; la aplicación se ejecuta desde el repositorio.
-- No hay sincronización entre equipos, OCR/foto ni consultas analíticas en lenguaje natural.
+- No hay sincronización entre equipos ni OCR/foto.

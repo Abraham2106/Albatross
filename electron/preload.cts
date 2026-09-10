@@ -17,6 +17,7 @@ const api: DesktopApi = {
   geo: () => ipcRenderer.invoke('philips:geo'),
   resumen: pais => ipcRenderer.invoke('philips:resumen', pais),
   cargarEjemplo: () => ipcRenderer.invoke('philips:ejemplo'),
+  consultar: (requestId, input) => ipcRenderer.invoke('philips:consultar', { requestId, ...input }),
   extraer: (requestId, input) => ipcRenderer.invoke('philips:extraer', { requestId, ...input }),
   ...(developmentTools ? {
     transcribir: (requestId: string, input: Parameters<NonNullable<DesktopApi['transcribir']>>[1]) => ipcRenderer.invoke('philips:transcribir', { requestId, ...input }),

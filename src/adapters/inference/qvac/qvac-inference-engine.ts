@@ -1,8 +1,8 @@
-import { InferenceError, type InferenceEngine, type TranscriptionRequest, type ExtractionRequest, type FollowUpRequest, type OperationOptions, type InferenceResult } from '../../../application/ports/inference-engine';
-import { checkCancelled, record, text, validateExtraction } from '../../../application/validation';
+import { InferenceError, type InferenceEngine, type TranscriptionRequest, type ExtractionRequest, type FollowUpRequest, type OperationOptions, type InferenceResult, type QueryRequest } from '../../../application/ports/inference-engine';
+import { checkCancelled, record, text, validateExtraction, validateQueryFilter } from '../../../application/validation';
 import { wavToPcm, SAMPLE_RATE } from '../../../application/audio';
-import { EXTRACTION_PROMPT, EXTRACTION_SCHEMA } from './schema';
-import { coerceExtraction, parseModelJson } from './parse-output';
+import { EXTRACTION_PROMPT, EXTRACTION_SCHEMA, QUERY_PROMPT, querySchema } from './schema';
+import { coerceExtraction, coerceQueryFilter, parseModelJson } from './parse-output';
 import { createSdkClient, type BackendTrace, type QvacClient, type RequestRun } from './sdk-client';
 
 export interface QvacOptions {
@@ -203,6 +203,16 @@ export class QvacInferenceEngine implements InferenceEngine {
       const raw = await this.tracked(client, client.complete(id, [{ role: 'system', content: EXTRACTION_PROMPT }, { role: 'user', content: transcript }], EXTRACTION_SCHEMA), signal, this.options.timeoutMs ?? 120000);
       try { return validateExtraction(coerceExtraction(parseModelJson(raw), hospitalId, transcript), hospitalId, transcript); }
       catch { throw new InferenceError('INVALID_OUTPUT', 'La extracción no cumple el esquema o su evidencia. Revisa el texto e inténtalo nuevamente.'); }
+    });
+  }
+  interpretQuery(input: QueryRequest, options: OperationOptions = {}) {
+    const question = text(input?.question, 'Pregunta', 300);
+    const allowed = input.options;
+    return this.execute('llm', options, async (client, id, signal) => {
+      this.options.onProgress?.('Interpretando la consulta…');
+      const raw = await this.tracked(client, client.complete(id, [{ role: 'system', content: QUERY_PROMPT }, { role: 'user', content: question }], querySchema(allowed)), signal, this.options.timeoutMs ?? 120000);
+      try { return validateQueryFilter(coerceQueryFilter(parseModelJson(raw), allowed, question), allowed); }
+      catch { throw new InferenceError('INVALID_OUTPUT', 'No entendí la pregunta. Probá con otra redacción.'); }
     });
   }
   generateFollowUps(input: FollowUpRequest, options: OperationOptions = {}) {

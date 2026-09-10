@@ -4,11 +4,13 @@ import Ficha from './screens/Ficha.jsx';
 import Captura from './screens/Captura.jsx';
 import ResumenPantalla from './screens/Resumen.jsx';
 import Mapa from './screens/Mapa.jsx';
-import { Lista, Micro, Grafico, Globo, Sol, Luna } from './components/Iconos.jsx';
+import Consultar from './screens/Consultar.jsx';
+import { Lista, Micro, Grafico, Globo, Sol, Luna, Lupa } from './components/Iconos.jsx';
 
 const SECCIONES = [
   { id: 'clientes', testid: 'cib-nav-hospitales', etq: 'Hospitales', Icono: Lista },
   { id: 'captura', testid: 'cib-nav-captura', etq: 'Capturar', Icono: Micro },
+  { id: 'consulta', testid: 'cib-nav-consulta', etq: 'Consultar', Icono: Lupa },
   { id: 'mapa', testid: undefined, etq: 'Cobertura', Icono: Globo },
   { id: 'resumen', testid: undefined, etq: 'Panorama', Icono: Grafico },
 ];
@@ -85,7 +87,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [clienteId]);
 
-  const fichaAparte = (tab === 'mapa' || tab === 'resumen') && clienteId;
+  const fichaAparte = (tab === 'mapa' || tab === 'resumen' || tab === 'consulta') && clienteId;
 
   return (
     <div className="app">
@@ -160,6 +162,10 @@ export default function App() {
               onEstado={setEstado}
               onListo={alGuardar}
             />
+          </div>
+
+          <div className={'vista' + (tab === 'consulta' && !clienteId ? ' vista-on' : '')}>
+            <Consultar key={version} activa={tab === 'consulta'} onAbrirCliente={(id) => abrirCliente(id, 'consulta')} />
           </div>
 
           <div className={'vista' + (tab === 'mapa' && !clienteId ? ' vista-on' : '')}>

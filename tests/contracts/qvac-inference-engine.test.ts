@@ -4,7 +4,7 @@ import type { QvacClient, RequestRun } from '../../src/adapters/inference/qvac/s
 import { candidate } from '../helpers/inference';
 import { pcmToWav, wavToPcm } from '../../src/application/audio';
 import { validateExtraction } from '../../src/application/validation';
-import { coerceExtraction } from '../../src/adapters/inference/qvac/parse-output';
+import { coerceExtraction, coerceQueryFilter } from '../../src/adapters/inference/qvac/parse-output';
 
 const transcript = 'Vi dos CT.';
 const payload = () => ({ mentionedHospital: { name: null, city: null, country: null, evidence: null }, candidates: [candidate('CT', 2, 'dos CT')] });
@@ -252,5 +252,50 @@ describe('audio and extraction boundaries', () => {
     ] };
     const result = validateExtraction(raw, 'a', 'Vi dos viejos, uno nuevo y no sé cuántos CT.');
     expect(result.candidates).toHaveLength(3); expect(result.candidates[2].quantity).toBeNull();
+  });
+});
+
+describe('natural-language query through QVAC', () => {
+  const options = { countries: ['Brazil'], cities: ['Sao Paulo'], brands: ['BluePeak Medical'] };
+  const filter = { countries: ['Brazil'], cities: [], modalities: ['MR'], brands: [], model: null, olderThanYears: 7, youngerThanYears: null, ageWord: null, minQuantity: null, statuses: [] };
+  it('sends the saved values as enums and returns the validated filter', async () => {
+    const client = clientMock();
+    client.complete.mockImplementation(() => resolved(JSON.stringify(filter)));
+    const engine = new QvacInferenceEngine({ enabled: true, clientFactory: async () => client });
+    const result = await engine.interpretQuery({ question: 'clientes en Brasil con resonadores de más de siete años', options });
+    expect(result.data).toEqual(filter);
+    const schema = client.complete.mock.calls[0][2] as { properties: { countries: { items: { enum: string[] } } } };
+    expect(schema.properties.countries.items.enum).toEqual(['Brazil']);
+    await engine.close();
+  });
+  it('turns a filter outside the schema into INVALID_OUTPUT', async () => {
+    const client = clientMock();
+    client.complete.mockImplementation(() => resolved(JSON.stringify({ ...filter, countries: ['Brasil'] })));
+    const engine = new QvacInferenceEngine({ enabled: true, clientFactory: async () => client });
+    await expect(engine.interpretQuery({ question: 'resonadores en Brasil', options })).rejects.toMatchObject({ code: 'INVALID_OUTPUT' });
+    await engine.close();
+  });
+  it('drops constraints Qwen invented that the question never states', () => {
+    const allowed = { countries: ['Brazil', 'Mexico'], cities: [], brands: ['Aurelia Health', 'HelixCare'] };
+    const base = { countries: [], cities: [], modalities: [], brands: [], model: null, olderThanYears: null, youngerThanYears: null, ageWord: null, minQuantity: null, statuses: [] };
+    expect(coerceQueryFilter({ ...base, countries: ['Mexico'], brands: ['Aurelia Health'], statuses: ['Confirmed'] }, allowed, 'hospitales con equipos Aurelia Health en México'))
+      .toMatchObject({ statuses: [] });
+    expect(coerceQueryFilter({ ...base, modalities: ['MR'], olderThanYears: 5, ageWord: 'old' }, allowed, 'MR viejos'))
+      .toMatchObject({ modalities: ['MR'], olderThanYears: null, ageWord: 'old' });
+    expect(coerceQueryFilter({ ...base, modalities: ['Ultrasound'], brands: ['HelixCare'], ageWord: 'new', statuses: ['Reported', 'Estimated', 'Unknown'] }, allowed, 'ecógrafos HelixCare sin confirmar'))
+      .toMatchObject({ modalities: ['Ultrasound'], ageWord: null, statuses: ['Reported', 'Estimated', 'Unknown'] });
+    expect(coerceQueryFilter({ ...base, modalities: ['MR', 'CT'], olderThanYears: 7 }, allowed, 'clientes en Brasil con resonadores de más de siete años'))
+      .toMatchObject({ modalities: ['MR'], olderThanYears: 7 });
+  });  it('absorbs the placeholders Qwen actually emits before validating', async () => {
+    const client = clientMock();
+    const allowed = { ...options, countries: ['Brazil', 'Mexico'], brands: ['Aurelia Health', 'BluePeak Medical'] };
+    const observed = { countries: ['Mexico'], cities: [], modalities: [], brands: ['Aurelia Health'], model: 'Aurelia Health', olderThanYears: 0, youngerThanYears: 0, ageWord: null, minQuantity: 1, statuses: ['Confirmed', 'Reported', 'Estimated', 'Unknown'] };
+    client.complete.mockImplementationOnce(() => resolved(JSON.stringify({ ...filter, model: '' })));
+    client.complete.mockImplementationOnce(() => resolved(JSON.stringify(observed)));
+    const engine = new QvacInferenceEngine({ enabled: true, clientFactory: async () => client });
+    expect((await engine.interpretQuery({ question: 'clientes en Brasil con resonadores de más de siete años', options: allowed })).data).toEqual(filter);
+    expect((await engine.interpretQuery({ question: 'hospitales con equipos Aurelia Health en México', options: allowed })).data)
+      .toEqual({ ...filter, countries: ['Mexico'], modalities: [], brands: ['Aurelia Health'], olderThanYears: null });
+    await engine.close();
   });
 });

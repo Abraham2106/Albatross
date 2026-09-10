@@ -1,4 +1,4 @@
-import { InferenceError, type ExtractionData, type ObservationCandidate } from './ports/inference-engine';
+import { InferenceError, type ExtractionData, type ObservationCandidate, type QueryFilter, type QueryOptions } from './ports/inference-engine';
 
 export const MODALITIES = ['MR', 'CT', 'Ultrasound', 'X-Ray', 'Patient Monitoring', 'Image Guided Therapy'] as const;
 export function invalid(message: string): never { throw new InferenceError('INVALID_INPUT', message); }
@@ -54,4 +54,32 @@ export function validateExtraction(value: unknown, hospitalId: string, transcrip
   if (mentionedHospital.evidence && !transcript.includes(mentionedHospital.evidence)) invalid('La evidencia del hospital no aparece en el texto.');
   if (!Array.isArray(v.candidates) || v.candidates.length > 50) invalid('Máximo 50 grupos por dictado.');
   return { hospitalId, mentionedHospital, candidates: v.candidates.map(c => validateCandidate(c, transcript)) };
+}
+export const STATUSES = ['Confirmed', 'Reported', 'Estimated', 'Unknown'] as const;
+const QUERY_KEYS = ['countries', 'cities', 'modalities', 'brands', 'model', 'olderThanYears', 'youngerThanYears', 'ageWord', 'minQuantity', 'statuses'] as const;
+function subset<T extends string>(value: unknown, allowed: readonly T[], label: string): T[] {
+  if (!Array.isArray(value) || value.some(v => !allowed.includes(v)) || new Set(value).size !== value.length) invalid(label + ': valor no reconocido.');
+  return [...value] as T[];
+}
+export function validateQueryFilter(value: unknown, options: QueryOptions): QueryFilter {
+  const v = record(value);
+  exactKeys(v, QUERY_KEYS);
+  if (v.ageWord !== null && v.ageWord !== 'old' && v.ageWord !== 'new') invalid('Edad inválida.');
+  const filter: QueryFilter = {
+    countries: subset(v.countries, options.countries, 'País'),
+    cities: subset(v.cities, options.cities, 'Ciudad'),
+    modalities: subset(v.modalities, MODALITIES, 'Modalidad'),
+    brands: subset(v.brands, options.brands, 'Marca'),
+    model: nullableText(v.model, 'Modelo'),
+    olderThanYears: nullableNumber(v.olderThanYears, 'Edad', 100),
+    youngerThanYears: nullableNumber(v.youngerThanYears, 'Edad', 100),
+    ageWord: v.ageWord as QueryFilter['ageWord'],
+    minQuantity: nullableNumber(v.minQuantity, 'Cantidad', 100000, true),
+    statuses: subset(v.statuses, STATUSES, 'Estado'),
+  };
+  if (filter.olderThanYears !== null && filter.youngerThanYears !== null && filter.olderThanYears >= filter.youngerThanYears) invalid('Rango de edad vacío.');
+  const scalars = [filter.model, filter.olderThanYears, filter.youngerThanYears, filter.ageWord, filter.minQuantity];
+  const lists = [filter.countries, filter.cities, filter.modalities, filter.brands, filter.statuses];
+  if (scalars.every(s => s === null) && lists.every(l => !l.length)) invalid('La pregunta no trae ningún filtro.');
+  return filter;
 }

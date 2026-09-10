@@ -29,6 +29,9 @@ export function fakeEngine(overrides: Partial<InferenceEngine> = {}): InferenceE
     async generateFollowUps(input) {
       return { data: input.gaps.map(gap => ({ gapId: gap.id, text: gap.description })), provenance: testProvenance };
     },
+    async interpretQuery() {
+      throw new InferenceError('UNSUPPORTED_INPUT', 'Unexpected query.');
+    },
   };
   return { ...engine, ...overrides };
 }

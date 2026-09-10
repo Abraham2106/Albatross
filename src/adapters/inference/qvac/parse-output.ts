@@ -1,5 +1,5 @@
-import { MODALITIES } from '../../../application/validation';
-import type { ExtractionData, MentionedHospital, ObservationCandidate } from '../../../application/ports/inference-engine';
+import { MODALITIES, STATUSES } from '../../../application/validation';
+import type { ExtractionData, MentionedHospital, ObservationCandidate, QueryOptions } from '../../../application/ports/inference-engine';
 
 const UNKNOWN_FIELDS = ['quantity', 'brand', 'model', 'ageYears'] as const;
 const ALIAS: Record<string, (typeof MODALITIES)[number]> = {
@@ -136,4 +136,48 @@ export function coerceExtraction(value: unknown, _hospitalId: string, transcript
     ? raw.candidates.map(item => coerceCandidate(item, transcript)).filter((item): item is ObservationCandidate => !!item).slice(0, 50)
     : [];
   return { mentionedHospital: coerceHospital(raw.mentionedHospital, transcript), candidates };
+}
+const MENTIONS: Record<string, readonly string[]> = {
+  MR: ['mr', 'mri', 'resona', 'magnetic'],
+  CT: ['ct', 'tac', 'tomogra', 'scanner', 'escaner'],
+  Ultrasound: ['ultra', 'ecogra', 'sonogra'],
+  'X-Ray': ['rayos x', 'x-ray', 'xray', 'rx', 'radiogra'],
+  'Patient Monitoring': ['monitor'],
+  'Image Guided Therapy': ['guiad', 'guided', 'igt'],
+  Confirmed: ['confirm'],
+  Reported: ['reportad', 'reported', 'sin confirmar', 'unconfirmed', 'no confirmad'],
+  Estimated: ['estimad', 'estimated', 'sin confirmar', 'unconfirmed', 'no confirmad'],
+  Unknown: ['sin datos', 'unknown', 'desconocid', 'sin confirmar', 'unconfirmed', 'no confirmad'],
+  old: ['viej', 'antigu', 'old', 'envejec', 'obsolet'],
+  new: ['nuev', 'recient', 'new', 'modern'],
+};
+const NUMBER_WORDS: Record<number, readonly string[]> = {
+  1: ['uno', 'una', 'one'], 2: ['dos', 'two'], 3: ['tres', 'three'], 4: ['cuatro', 'four'], 5: ['cinco', 'five'],
+  6: ['seis', 'six'], 7: ['siete', 'seven'], 8: ['ocho', 'eight'], 9: ['nueve', 'nine'], 10: ['diez', 'ten', 'decada', 'decade'],
+  11: ['once', 'eleven'], 12: ['doce', 'twelve'], 13: ['trece', 'thirteen'], 14: ['catorce', 'fourteen'], 15: ['quince', 'fifteen'], 20: ['veinte', 'twenty'],
+};
+
+function says(question: string, stem: string) {
+  return stem.length <= 3 ? new RegExp(`(^|[^a-z])${stem}([^a-z]|$)`).test(question) : question.includes(stem);
+}
+
+export function coerceQueryFilter(value: unknown, options: QueryOptions, question: string): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const q = fold(question);
+  const negated = ['sin confirmar', 'unconfirmed', 'no confirmad'].some(s => q.includes(s));
+  const mentioned = (key: string) => (key !== 'Confirmed' || !negated) && (MENTIONS[key] ?? []).some(stem => says(q, stem));
+  const number = (n: unknown) => typeof n === 'number' && (new RegExp(`(^|\\D)${n}(\\D|$)`).test(q) || (NUMBER_WORDS[n] ?? []).some(w => says(q, w)));
+  const v = { ...value as Record<string, unknown> };
+  const everything = (list: unknown, allowed: readonly string[]) => Array.isArray(list) && allowed.every(a => list.includes(a)) ? [] : list;
+  const grounded = (list: unknown) => Array.isArray(list) ? list.filter(item => typeof item !== 'string' || mentioned(item)) : list;
+  const model = typeof v.model === 'string' ? v.model.trim() : v.model;
+  v.model = model === '' || (typeof model === 'string' && options.brands.some(b => fold(b) === fold(model))) ? null : model;
+  if (!number(v.olderThanYears)) v.olderThanYears = null;
+  if (!number(v.youngerThanYears)) v.youngerThanYears = null;
+  if (typeof v.minQuantity === 'number' && (v.minQuantity <= 1 || !(number(v.minQuantity) || number(v.minQuantity - 1)))) v.minQuantity = null;
+  if (typeof v.ageWord === 'string' && !mentioned(v.ageWord)) v.ageWord = null;
+  v.modalities = grounded(everything(v.modalities, MODALITIES));
+  v.statuses = grounded(everything(v.statuses, STATUSES));
+  v.brands = everything(v.brands, options.brands);
+  return v;
 }

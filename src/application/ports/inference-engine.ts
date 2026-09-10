@@ -1,4 +1,4 @@
-import type { Modality } from '../../domain/types';
+import type { Modality, StatusLevel } from '../../domain/types';
 
 export type InferenceErrorCode = 'INVALID_INPUT' | 'UNAVAILABLE' | 'TIMEOUT' | 'UNSUPPORTED_INPUT' | 'INVALID_OUTPUT' | 'CANCELLED' | 'CONFLICT';
 export class InferenceError extends Error {
@@ -58,9 +58,24 @@ export interface FollowUpRequest {
   readonly gaps: readonly { readonly id: string; readonly description: string }[];
 }
 export interface FollowUpQuestion { readonly gapId: string; readonly text: string }
+export interface QueryOptions { readonly countries: readonly string[]; readonly cities: readonly string[]; readonly brands: readonly string[] }
+export interface QueryFilter {
+  readonly countries: readonly string[];
+  readonly cities: readonly string[];
+  readonly modalities: readonly Modality[];
+  readonly brands: readonly string[];
+  readonly model: string | null;
+  readonly olderThanYears: number | null;
+  readonly youngerThanYears: number | null;
+  readonly ageWord: 'old' | 'new' | null;
+  readonly minQuantity: number | null;
+  readonly statuses: readonly StatusLevel[];
+}
+export interface QueryRequest { readonly question: string; readonly options: QueryOptions }
 export interface InferenceEngine {
   transcribe(input: TranscriptionRequest, options?: OperationOptions): Promise<InferenceResult<{ readonly text: string }>>;
   extractObservations(input: ExtractionRequest, options?: OperationOptions): Promise<InferenceResult<ExtractionData>>;
   generateFollowUps(input: FollowUpRequest, options?: OperationOptions): Promise<InferenceResult<readonly FollowUpQuestion[]>>;
+  interpretQuery(input: QueryRequest, options?: OperationOptions): Promise<InferenceResult<QueryFilter>>;
   close?(): Promise<void>;
 }

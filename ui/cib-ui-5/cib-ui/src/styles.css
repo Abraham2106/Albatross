@@ -835,6 +835,68 @@ td { padding: 10px 0; border-top: 1px solid var(--linea); }
 }
 @keyframes girar { to { transform: rotate(360deg); } }
 
+.consulta-form { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
+.consulta-campo {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r);
+  background: var(--panel);
+  color: var(--tinta);
+  font: inherit;
+  font-size: 15px;
+}
+.consulta-campo:focus { border-color: var(--acento); outline: none; }
+.consulta-ejemplos { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
+.consulta-ejemplo {
+  padding: 8px 12px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  font-size: 14px;
+  text-align: left;
+}
+.consulta-entendi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--linea);
+  font-size: 13px;
+}
+.consulta-rotulo { font-weight: 600; color: var(--tinta-2); }
+.consulta-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px 5px 11px;
+  border: 1px solid var(--acento);
+  border-radius: 20px;
+  background: var(--acento-suave);
+  font-size: 13px;
+}
+.consulta-etiqueta b { color: var(--tinta-3); font-weight: 400; }
+.consulta-total { margin-left: auto; color: var(--tinta-2); }
+.consulta-total b { color: var(--tinta); }
+.consulta-nota { padding: 10px 22px 0; }
+.consulta-hospital {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 14px 22px 4px;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+.consulta-hospital:hover .consulta-cabeza .fila-t { color: var(--acento); }
+.consulta-cabeza { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.consulta-hospital .fila-t,
+.consulta-hospital .fila-s { display: block; }
+
 @media (max-width: 799px) {
   .app { grid-template-columns: var(--rail-fino) minmax(0, 1fr); }
   .marca { justify-content: center; padding: 4px 0 12px; }

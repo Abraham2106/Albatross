@@ -86,6 +86,13 @@ export const extraer = (texto, audio) => {
   return pedir('/observaciones', { method: 'POST', body: JSON.stringify({ texto }) });
 };
 
+export const consultar = (input) => {
+  const api = desktop();
+  lastRequestId = crypto.randomUUID();
+  if (!api?.consultar) return Promise.reject(new Error('SIN_BACKEND'));
+  return viaDesktop(() => api.consultar(lastRequestId, input));
+};
+
 export const cancelar = () => {
   const api = desktop();
   if (!api?.cancel || !lastRequestId) return Promise.resolve();

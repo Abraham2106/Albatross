@@ -92,5 +92,3 @@ docs/contrato-api.json ← ejemplos para el backend
 ## Pendiente
 
 El dictado de Captura está conectado a Whisper local vía QVAC en Electron y pertenece al producto; las restricciones de herramientas de desarrollo no lo deshabilitan.
-
-**Consultas en lenguaje natural sobre el dataset.** El brief lo menciona con ejemplo propio ("clientes en Brasil con resonadores de más de siete años"). No hay pantalla todavía.

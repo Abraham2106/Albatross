@@ -6,6 +6,7 @@ import { checkCancelled, invalid, record, text, validateCandidate } from './vali
 import { applyRespuestas, resolveHospital, type CibRespuesta } from './cib';
 import { wavToPcm } from './audio';
 import { summarizeWhisperSpeed, type WhisperSpeedResult } from './whisper-metrics';
+import { queryOptions } from './consulta';
 
 export interface ProcessVisitInput {
   hospital: HospitalInput;
@@ -38,6 +39,9 @@ export class VisitService {
   list() { return { sites: this.repository.listSites(), drafts: this.repository.listDrafts() }; }
     verifyIntegrity() { return this.repository.verifyIntegrity(); }
   loadSample() { return this.repository.seed(buildSeedSites()); }
+  interpretQuery(question: string, options: OperationOptions = {}) {
+    return this.engine.interpretQuery({ question: text(question, 'Pregunta', 300), options: queryOptions(this.repository.listSites()) }, options);
+  }
   getProfile(id: string) {
     const entry = this.repository.getSite(text(id, 'Hospital'));
     if (!entry) invalid('Hospital no encontrado.');

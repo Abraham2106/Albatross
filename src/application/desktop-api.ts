@@ -1,7 +1,7 @@
 import type { ProcessVisitInput, ReviewInput, VisitService } from './visits';
 import type { NetworkAuditReport } from './network-audit';
 import type { CibService } from './cib-service';
-import type { InferenceErrorCode, TranscriptionRequest } from './ports/inference-engine';
+import type { InferenceErrorCode, QueryFilter, TranscriptionRequest } from './ports/inference-engine';
 import type { WhisperSpeedResult } from './whisper-metrics';
 export type Result<T> = { ok: true; data: T } | { ok: false; error: { code: InferenceErrorCode; message: string } };
 export interface RuntimeStatus { mode: 'qvac'; modelsEnabled: boolean; message: string }
@@ -34,6 +34,7 @@ export interface DesktopApi {
   geo(): Promise<Result<ReturnType<CibService['geo']>>>;
   resumen(pais?: string): Promise<Result<ReturnType<CibService['resumen']>>>;
   cargarEjemplo(): Promise<Result<ReturnType<CibService['cargarEjemplo']>>>;
+  consultar(requestId: string, input: { pregunta: string } | { filtro: QueryFilter }): Promise<Result<Awaited<ReturnType<CibService['consultar']>>>>;
   extraer(requestId: string, input: { texto?: string; audio?: TranscriptionRequest }): Promise<Result<Awaited<ReturnType<CibService['extraer']>>>>;
   transcribir?(requestId: string, input: TranscriptionRequest): Promise<Result<WhisperSpeedResult>>;
   openWav?(): Promise<Result<OpenWavResult | null>>;

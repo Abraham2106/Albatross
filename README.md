@@ -29,7 +29,7 @@ La siguiente persona que abra ese hospital no ve un formulario en blanco. Ve tre
 | --- | --- |
 | [Ficha del hospital] | [Revisión de lo captado] |
 
-Cuatro pantallas: **Hospitales** (ordenados por lo que falta), **Capturar** (dictado y revisión), **Cobertura** (región → país → ciudad → hospital) y **Panorama** (equipos por modalidad, base envejecida, sitios sin verificar).
+Cinco pantallas: **Hospitales** (ordenados por lo que falta), **Capturar** (dictado y revisión), **Consultar** (preguntas en lenguaje natural sobre la base), **Cobertura** (región → país → ciudad → hospital) y **Panorama** (equipos por modalidad, base envejecida, sitios sin verificar).
 
 Los cronómetros de transcripción/procesamiento, los tiempos de carga y la ventana **Velocidad de Whisper** son herramientas exclusivas del ambiente de desarrollo y validación (`npm run dev`). No forman parte del producto ni del prototipo mínimo presentado a Philips y están deshabilitados en el build de producción.
 
