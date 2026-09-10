@@ -1,16 +1,36 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSdkClient } from '../../src/adapters/inference/qvac/sdk-client';
+import { QvacInferenceEngine } from '../../src/adapters/inference/qvac';
+import { candidate } from '../helpers/inference';
 
-const { completion } = vi.hoisted(() => ({ completion: vi.fn() }));
+const { completion, profiler } = vi.hoisted(() => ({ completion: vi.fn(), profiler: { enable: vi.fn(), disable: vi.fn(), onRecord: vi.fn(() => () => {}) } }));
 vi.mock('@qvac/sdk', () => ({
   completion,
-  profiler: {
-    enable: vi.fn(),
-    disable: vi.fn(),
-    onRecord: vi.fn(() => () => {}),
-  },
+  profiler,
+  loadModel: vi.fn(() => Object.assign(Promise.resolve('llm-model'), { requestId: 'load' })),
+  unloadModel: vi.fn(async () => {}),
+  close: vi.fn(async () => {}),
 }));
-beforeEach(() => completion.mockReset());
+beforeEach(() => { completion.mockReset(); profiler.enable.mockClear(); profiler.disable.mockClear(); });
+
+describe('profiler opt-in', () => {
+  it('stays off for the default client and the engine default factory', async () => {
+    await createSdkClient(() => {});
+    const payload = { mentionedHospital: { name: null, city: null, country: null, evidence: null }, candidates: [candidate('CT', 2, 'dos CT')] };
+    completion.mockReturnValue({ requestId: 'r', final: Promise.resolve({ contentText: JSON.stringify(payload) }) });
+    const engine = new QvacInferenceEngine({ enabled: true });
+    await engine.extractObservations({ hospitalId: 'a', transcript: 'Vi dos CT.' });
+    await engine.close();
+    expect(profiler.enable).not.toHaveBeenCalled();
+    expect(profiler.disable).not.toHaveBeenCalled();
+  });
+  it('enables verbose profiling only when the client opts in', async () => {
+    const client = await createSdkClient(() => {}, undefined, undefined, { profiler: true });
+    expect(profiler.enable).toHaveBeenCalledExactlyOnceWith({ mode: 'verbose', includeServerBreakdown: true });
+    await client.close();
+    expect(profiler.disable).toHaveBeenCalledOnce();
+  });
+});
 
 describe('optional completion diagnostics', () => {
   it('preserves original output and stop reason before parser coercion', async () => {

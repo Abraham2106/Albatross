@@ -17,6 +17,7 @@ export interface BackendTrace {
   fallback?: { requestedDevice?: 'cpu' | 'gpu'; reason: string };
 }
 export interface RequestRun<T> { requestId: string; final: Promise<T> }
+export interface SdkClientOptions { profiler?: boolean }
 export interface QvacClient {
   load(capability: 'stt' | 'llm', source?: string): RequestRun<string>;
   transcribe(modelId: string, pcm: Uint8Array): RequestRun<string>;
@@ -29,10 +30,10 @@ function localWeight(file: string): string | undefined {
   const candidate = join(process.cwd(), 'models', file);
   return existsSync(candidate) ? candidate : undefined;
 }
-export async function createSdkClient(onProgress: (message: string) => void, onCompletion?: (trace: CompletionTrace) => void, onBackend?: (trace: BackendTrace) => void): Promise<QvacClient> {
+export async function createSdkClient(onProgress: (message: string) => void, onCompletion?: (trace: CompletionTrace) => void, onBackend?: (trace: BackendTrace) => void, options: SdkClientOptions = {}): Promise<QvacClient> {
   // Importing the adapter does not start QVAC; this boundary is reached only after opt-in.
   const sdk = await import('@qvac/sdk');
-  sdk.profiler.enable({ mode: 'verbose', includeServerBreakdown: true });
+  if (options.profiler) sdk.profiler.enable({ mode: 'verbose', includeServerBreakdown: true });
   const unsubscribeBackend = sdk.profiler.onRecord(event => {
     const backend = event.backend;
     if (!backend) return;
@@ -82,6 +83,6 @@ export async function createSdkClient(onProgress: (message: string) => void, onC
     },
     cancel: requestId => sdk.cancel({ requestId }),
     unload: modelId => sdk.unloadModel({ modelId, clearStorage: false, autoClose: false }),
-    close: async () => { unsubscribeBackend(); sdk.profiler.disable(); await sdk.close(); },
+    close: async () => { unsubscribeBackend(); if (options.profiler) sdk.profiler.disable(); await sdk.close(); },
   };
 }

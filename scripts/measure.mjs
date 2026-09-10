@@ -149,7 +149,7 @@ async function main() {
     modelConfig: { ctx_size: 4096 }, ageAliases: AGE_ALIASES,
     sourceHashes: Object.fromEntries(sourceFiles.map(path => [path, createHash('sha256').update(readFileSync(rel(path))).digest('hex')])) };
   let trace = null;
-  const engine = new QvacInferenceEngine({ enabled: true, clientFactory: () => createSdkClient(message => console.log(message), value => { trace = value; }) });
+  const engine = new QvacInferenceEngine({ enabled: true, clientFactory: () => createSdkClient(message => console.log(message), value => { trace = value; }, undefined, { profiler: true }) });
   const run = { metadata, warmup: null, results: [], summary: null, error: null };
   const artifact = `${dir}/run.json`;
   try {
