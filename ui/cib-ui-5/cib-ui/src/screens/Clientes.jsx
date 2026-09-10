@@ -1,30 +1,43 @@
 import { listarClientes } from '../api/client.js';
 import { Confianza } from '../components/Estado.jsx';
-import { Cargando, Error, Vacio, usePedido } from '../components/Estados.jsx';
+import { Cargando, Error, Vacio, esSinDatos, usePedido } from '../components/Estados.jsx';
 
-export default function Clientes({ onAbrir }) {
+export default function Clientes({ onAbrir, onCapturar, seleccionado }) {
   const { datos, error, reintentar } = usePedido(listarClientes);
 
-  if (error) return <Error error={error} onReintentar={reintentar} />;
-  if (!datos) return <Cargando que="Cargando hospitales" />;
-  if (!datos.length) return <Vacio mensaje="Todavía no hay clientes registrados." />;
+  if (error && !esSinDatos(error)) return <Error error={error} onReintentar={reintentar} />;
+  if (!datos && !error) return <Cargando que="Cargando hospitales" />;
+  if (error || !datos.length) {
+    return (
+      <Vacio
+        mensaje="Todavía no hay hospitales. Capturá la primera observación."
+        accion="Ir a capturar"
+        onAccion={onCapturar}
+      />
+    );
+  }
 
-  // Los mas incompletos primero. Ese es el punto del producto:
-  // la app le dice al ingeniero donde falta informacion.
   const orden = [...datos].sort((a, b) => a.confianza - b.confianza);
   const pais = datos[0]?.pais;
 
   return (
-    <>
+    <div className="pantalla">
       <div className="top">
-        <p className="ruta">{pais ? `${pais} · ` : ''}{datos.length} clientes</p>
-        <h1 className="titulo">Tus hospitales</h1>
+        <p className="ruta">{pais ? `${pais} · ` : ''}{datos.length} hospitales</p>
+        <h1 className="titulo">Hospitales</h1>
       </div>
 
       <div className="cuerpo">
         {orden.map((c) => (
-          <button key={c.id} className="fila" onClick={() => onAbrir(c.id)}>
-            <div>
+          <button
+            key={c.id}
+            type="button"
+            className="fila"
+            data-sel={c.id === seleccionado}
+            aria-current={c.id === seleccionado ? 'true' : undefined}
+            onClick={() => onAbrir(c.id)}
+          >
+            <div className="fila-texto">
               <p className="fila-t">{c.nombre}</p>
               <p className="fila-s">
                 {c.ciudad}
@@ -35,6 +48,6 @@ export default function Clientes({ onAbrir }) {
           </button>
         ))}
       </div>
-    </>
+    </div>
   );
 }

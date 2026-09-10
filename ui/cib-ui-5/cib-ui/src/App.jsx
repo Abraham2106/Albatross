@@ -1,62 +1,161 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Clientes from './screens/Clientes.jsx';
 import Ficha from './screens/Ficha.jsx';
 import Captura from './screens/Captura.jsx';
 import ResumenPantalla from './screens/Resumen.jsx';
 import Mapa from './screens/Mapa.jsx';
-import { Lista, Micro, Grafico, Globo } from './components/Iconos.jsx';
+import { Lista, Micro, Grafico, Globo, Sol, Luna } from './components/Iconos.jsx';
 
-/**
- * Navegacion a mano con useState.
- *
- * Sin react-router a proposito: son cinco pantallas, no vale la dependencia
- * ni el tiempo de configurarla en un hackathon.
- */
+const SECCIONES = [
+  { id: 'clientes', testid: 'cib-nav-hospitales', etq: 'Hospitales', Icono: Lista },
+  { id: 'captura', testid: 'cib-nav-captura', etq: 'Capturar', Icono: Micro },
+  { id: 'mapa', testid: undefined, etq: 'Cobertura', Icono: Globo },
+  { id: 'resumen', testid: undefined, etq: 'Panorama', Icono: Grafico },
+];
+
+const TEMA_KEY = 'philips-tema';
+
+function temaInicial() {
+  try {
+    const saved = localStorage.getItem(TEMA_KEY);
+    if (saved === 'claro' || saved === 'oscuro') return saved;
+  } catch { /* private mode */ }
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'oscuro';
+}
+
+function aplicarTema(tema) {
+  document.documentElement.dataset.tema = tema;
+  document.documentElement.style.colorScheme = tema === 'claro' ? 'light' : 'dark';
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', tema === 'claro' ? '#e8eef1' : '#0c1114');
+}
+
+aplicarTema(temaInicial());
 
 export default function App() {
   const [tab, setTab] = useState('clientes');
   const [clienteId, setClienteId] = useState(null);
   const [volverA, setVolverA] = useState('clientes');
+  const [estado, setEstado] = useState('Sin conexión · en el dispositivo');
+  const [tema, setTema] = useState(temaInicial);
+
+  useEffect(() => {
+    aplicarTema(tema);
+    try { localStorage.setItem(TEMA_KEY, tema); } catch { /* ignore */ }
+  }, [tema]);
 
   function abrirCliente(id, desde) {
     setVolverA(desde || tab);
     setClienteId(id);
   }
 
-  const pantalla = clienteId ? (
-    <Ficha id={clienteId} onVolver={() => { setClienteId(null); setTab(volverA); }} />
-  ) : tab === 'clientes' ? (
-    <Clientes onAbrir={(id) => abrirCliente(id, 'clientes')} />
-  ) : tab === 'captura' ? (
-    <Captura onListo={() => setTab('clientes')} />
-  ) : tab === 'mapa' ? (
-    <Mapa onAbrirCliente={(id) => abrirCliente(id, 'mapa')} />
-  ) : (
-    <ResumenPantalla />
-  );
-
   function ir(destino) {
     setClienteId(null);
     setTab(destino);
   }
 
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key !== 'Escape' || !clienteId) return;
+      if (e.target.closest('input, textarea, select')) return;
+      setClienteId(null);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [clienteId]);
+
+  const fichaDesdeMapa = tab === 'mapa' && clienteId;
+
   return (
-    <div className="marco">
-      {pantalla}
-      <nav className="nav">
-        <button data-testid="cib-nav-hospitales" data-activo={tab === 'clientes' && !clienteId} onClick={() => ir('clientes')}>
-          <Lista /> Hospitales
-        </button>
-        <button data-testid="cib-nav-captura" data-activo={tab === 'captura'} onClick={() => ir('captura')}>
-          <Micro /> Capturar
-        </button>
-        <button data-activo={tab === 'mapa' && !clienteId} onClick={() => ir('mapa')}>
-          <Globo /> Cobertura
-        </button>
-        <button data-activo={tab === 'resumen'} onClick={() => ir('resumen')}>
-          <Grafico /> Panorama
-        </button>
+    <div className="app">
+      <nav className="rail" aria-label="Secciones">
+        <div className="marca">
+          <span className="marca-sigla" aria-hidden="true">IB</span>
+          <div className="marca-texto">
+            <strong>Base instalada</strong>
+            <span>En el dispositivo</span>
+          </div>
+        </div>
+        {SECCIONES.map(({ id, testid, etq, Icono }) => {
+          const activo = id === 'clientes' ? tab === 'clientes' : tab === id && !clienteId;
+          return (
+            <button
+              key={id}
+              type="button"
+              data-testid={testid}
+              data-activo={activo}
+              aria-current={activo ? 'page' : undefined}
+              onClick={() => ir(id)}
+            >
+              <Icono />
+              <span className="nav-etq">{etq}</span>
+            </button>
+          );
+        })}
+        <div className="rail-pie">
+          <button
+            type="button"
+            data-testid="cib-tema"
+            title={tema === 'oscuro' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            aria-pressed={tema === 'oscuro'}
+            aria-label={tema === 'oscuro' ? 'Activar modo claro' : 'Activar modo oscuro'}
+            onClick={() => setTema((t) => (t === 'oscuro' ? 'claro' : 'oscuro'))}
+          >
+            {tema === 'oscuro' ? <Sol /> : <Luna />}
+            <span className="nav-etq">{tema === 'oscuro' ? 'Modo claro' : 'Modo oscuro'}</span>
+          </button>
+        </div>
       </nav>
+
+      <div className="columna">
+        <main className="workspace" id="principal">
+          <div className={'vista' + (tab === 'clientes' && !fichaDesdeMapa ? ' vista-on' : '')}>
+            <div className={'reparto' + (clienteId ? ' reparto-abierto' : '')}>
+              <div className="reparto-lista">
+                <Clientes
+                  seleccionado={clienteId}
+                  onAbrir={(id) => abrirCliente(id, 'clientes')}
+                  onCapturar={() => ir('captura')}
+                />
+              </div>
+              <div className="reparto-ficha">
+                {clienteId && tab === 'clientes' ? (
+                  <Ficha id={clienteId} onVolver={() => setClienteId(null)} />
+                ) : (
+                  <div className="vacio vacio-ficha">
+                    <p>Elegí un hospital</p>
+                    <span>La ficha y lo que falta averiguar aparecen aquí.</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className={'vista' + (tab === 'captura' ? ' vista-on' : '')}>
+            <Captura
+              onEstado={setEstado}
+              onListo={() => setTab('clientes')}
+            />
+          </div>
+
+          <div className={'vista' + (tab === 'mapa' && !clienteId ? ' vista-on' : '')}>
+            <Mapa onAbrirCliente={(id) => abrirCliente(id, 'mapa')} />
+          </div>
+
+          <div className={'vista' + (tab === 'resumen' ? ' vista-on' : '')}>
+            <ResumenPantalla />
+          </div>
+
+          {fichaDesdeMapa && (
+            <div className="vista vista-on">
+              <Ficha id={clienteId} onVolver={() => { setClienteId(null); setTab(volverA); }} />
+            </div>
+          )}
+        </main>
+        <footer className="estado-barra">
+          <span role="status">{estado}</span>
+        </footer>
+      </div>
     </div>
   );
 }

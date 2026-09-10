@@ -1,31 +1,31 @@
 /**
  * Estados de carga y error.
- *
- * Mientras el backend no exista, esto es lo que se va a ver siempre.
- * Vale la pena que se vea bien: un error claro da mas confianza que
- * una pantalla en blanco, y si algo falla durante la demo, al menos
- * se entiende que fallo.
  */
+
+export function esSinDatos(error) {
+  return error === 'SIN_BACKEND'
+    || /JSON\.parse|Unexpected token|unexpected character|is not valid JSON|Origen no autorizado/i.test(String(error || ''));
+}
 
 export function Cargando({ que = 'Cargando' }) {
   return <p className="vacio">{que}…</p>;
 }
 
 export function Error({ error, onReintentar }) {
-  const sinBackend = error === 'SIN_BACKEND';
+  const sinDatos = esSinDatos(error);
 
   return (
     <div className="vacio">
       <p style={{ fontWeight: 500, color: 'var(--tinta)', marginBottom: 6 }}>
-        {sinBackend ? 'El servidor no responde' : 'No se pudo cargar'}
+        {sinDatos ? 'Todavía no hay datos' : 'No se pudo cargar'}
       </p>
       <p style={{ margin: '0 0 16px' }}>
-        {sinBackend
-          ? 'Revisa que el backend este corriendo en el puerto 3000.'
-          : `El servidor respondio con ${error}.`}
+        {sinDatos
+          ? 'Capturá una observación para empezar. Todo se procesa en este dispositivo.'
+          : 'Reintentá. Si sigue fallando, reiniciá la app.'}
       </p>
       {onReintentar && (
-        <button className="btn" style={{ maxWidth: 200 }} onClick={onReintentar}>
+        <button type="button" className="btn" onClick={onReintentar}>
           Reintentar
         </button>
       )}
@@ -33,14 +33,17 @@ export function Error({ error, onReintentar }) {
   );
 }
 
-export function Vacio({ mensaje }) {
-  return <p className="vacio">{mensaje}</p>;
+export function Vacio({ mensaje, accion, onAccion }) {
+  return (
+    <div className="vacio">
+      <p>{mensaje}</p>
+      {accion && onAccion && (
+        <button type="button" className="btn" onClick={onAccion}>{accion}</button>
+      )}
+    </div>
+  );
 }
 
-/**
- * Hook para pedir datos. Maneja carga, error y reintento en un solo lugar
- * para no repetir el mismo useEffect en cada pantalla.
- */
 import { useState, useEffect, useCallback } from 'react';
 
 export function usePedido(fn, deps = []) {
@@ -56,7 +59,10 @@ export function usePedido(fn, deps = []) {
     setError(null);
     fn()
       .then((d) => vivo && setDatos(d))
-      .catch((e) => vivo && setError(e.message));
+      .catch((e) => {
+        const msg = e instanceof Error ? e.message : String(e);
+        vivo && setError(esSinDatos(msg) ? 'SIN_BACKEND' : msg);
+      });
     return () => { vivo = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, intento]);

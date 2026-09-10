@@ -20,11 +20,11 @@ export default function Ficha({ id, onVolver }) {
   if (!c) return <Cargando que="Cargando ficha" />;
 
   return (
-    <>
+    <div className="pantalla">
       <div className="top">
-        <button className="volver" onClick={onVolver}>Hospitales</button>
+        <button type="button" className="volver" onClick={onVolver}>Hospitales</button>
         <p className="ruta">{c.pais} › {c.ciudad}</p>
-        <h1 className="titulo" style={{ marginBottom: 10 }}>{c.nombre}</h1>
+        <h1 className="titulo ficha-titulo">{c.nombre}</h1>
         <Confianza pct={c.confianza} />
       </div>
 
@@ -67,6 +67,6 @@ export default function Ficha({ id, onVolver }) {
           ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }

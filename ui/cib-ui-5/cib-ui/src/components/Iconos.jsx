@@ -44,3 +44,15 @@ export const Copia = (p) => (
 export const Globo = (p) => (
   <svg {...base} {...p} aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18" /></svg>
 );
+
+export const Reloj = (p) => (
+  <svg {...base} {...p} aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+);
+
+export const Sol = (p) => (
+  <svg {...base} {...p} aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
+);
+
+export const Luna = (p) => (
+  <svg {...base} {...p} aria-hidden="true"><path d="M21 14.5A8.5 8.5 0 1 1 9.5 3 7 7 0 0 0 21 14.5z" /></svg>
+);

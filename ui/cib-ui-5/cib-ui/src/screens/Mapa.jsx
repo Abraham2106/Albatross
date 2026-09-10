@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { obtenerGeo } from '../api/client.js';
 import { nivel } from '../components/Estado.jsx';
-import { Cargando, Error, usePedido } from '../components/Estados.jsx';
+import { Cargando, Error, Vacio, esSinDatos, usePedido } from '../components/Estados.jsx';
 
 /**
  * Mapa por niveles: Region → Pais → Ciudad → Hospital.
@@ -35,8 +35,11 @@ export default function Mapa({ onAbrirCliente }) {
   const [pais, setPais] = useState(null);
   const [ciudad, setCiudad] = useState(null);
 
-  if (error) return <Error error={error} onReintentar={reintentar} />;
-  if (!geo) return <Cargando que="Cargando cobertura" />;
+  if (error && !esSinDatos(error)) return <Error error={error} onReintentar={reintentar} />;
+  if (!geo && !error) return <Cargando que="Cargando cobertura" />;
+  if (error || !geo) {
+    return <Vacio mensaje="Todavía no hay cobertura. Capturá una observación para ver el mapa." />;
+  }
 
   const ruta = ['Latinoamérica', pais?.nombre, ciudad?.nombre].filter(Boolean);
 
@@ -46,7 +49,7 @@ export default function Mapa({ onAbrirCliente }) {
   }
 
   return (
-    <>
+    <div className="pantalla">
       <div className="top">
         {(pais || ciudad) && (
           <button className="volver" onClick={subir}>
@@ -59,7 +62,7 @@ export default function Mapa({ onAbrirCliente }) {
         </h1>
       </div>
 
-      <div className="cuerpo" style={{ padding: '14px 18px' }}>
+      <div className="cuerpo cuerpo-pad">
 
         {!pais && (
           <>
@@ -147,7 +150,7 @@ export default function Mapa({ onAbrirCliente }) {
             </div>
 
             <p style={{ fontSize: 12, color: 'var(--tinta-3)', margin: '10px 0 14px' }}>
-              El tamaño del punto es la cantidad de equipos conocidos. Tocalo para ver la ficha.
+              El tamaño del punto es la cantidad de equipos conocidos. Clic para ver la ficha.
             </p>
 
             {[...ciudad.hospitales].sort((a, b) => a.confianza - b.confianza).map((h) => (
@@ -167,7 +170,7 @@ export default function Mapa({ onAbrirCliente }) {
           </>
         )}
       </div>
-    </>
+    </div>
   );
 }
 

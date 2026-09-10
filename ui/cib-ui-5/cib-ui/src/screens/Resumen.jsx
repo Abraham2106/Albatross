@@ -1,5 +1,5 @@
 import { obtenerResumen } from '../api/client.js';
-import { Cargando, Error, usePedido } from '../components/Estados.jsx';
+import { Cargando, Error, Vacio, esSinDatos, usePedido } from '../components/Estados.jsx';
 
 const COLOR = {
   alta: ['var(--peligro-bg)', 'var(--peligro)'],
@@ -10,18 +10,21 @@ const COLOR = {
 export default function Resumen() {
   const { datos: r, error, reintentar } = usePedido(obtenerResumen);
 
-  if (error) return <Error error={error} onReintentar={reintentar} />;
-  if (!r) return <Cargando que="Cargando panorama" />;
+  if (error && !esSinDatos(error)) return <Error error={error} onReintentar={reintentar} />;
+  if (!r && !error) return <Cargando que="Cargando panorama" />;
+  if (error || !r) {
+    return <Vacio mensaje="Todavía no hay panorama. Capturá una observación para ver números." />;
+  }
 
   return (
-    <>
+    <div className="pantalla">
       <div className="top">
         <p className="ruta">{r.region} › {r.pais}</p>
         <h1 className="titulo">Panorama</h1>
       </div>
 
       <div className="cuerpo">
-        <div className="metricas" style={{ paddingTop: 14 }}>
+        <div className="metricas">
           <div className="metrica"><p>Clientes</p><b className="num">{r.clientes}</b></div>
           <div className="metrica"><p>Equipos vistos</p><b className="num">{r.equipos}</b></div>
           <div className="metrica">
@@ -52,6 +55,6 @@ export default function Resumen() {
           })}
         </div>
       </div>
-    </>
+    </div>
   );
 }
