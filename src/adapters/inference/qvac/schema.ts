@@ -10,7 +10,7 @@ const group = {
     ageYears: { type: ['number', 'null'], minimum: 0, maximum: 100 },
     ageDescription: stringOrNull,
     quantityApproximate: { type: 'boolean' }, ageApproximate: { type: 'boolean' },
-    unknownFields: { type: 'array', items: { type: 'string', enum: ['quantity', 'brand', 'model', 'ageYears'] } },
+    unknownFields: { type: 'array', maxItems: 4, items: { type: 'string', enum: ['quantity', 'brand', 'model', 'ageYears'] } },
     evidence: { type: 'string' },
   },
   required: ['modality', 'scope', 'quantity', 'brand', 'model', 'ageYears', 'ageDescription', 'quantityApproximate', 'ageApproximate', 'unknownFields', 'evidence'],

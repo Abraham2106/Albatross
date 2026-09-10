@@ -1,8 +1,8 @@
 # REPORT.md — medicion de extraccion
 
-Generado por `scripts/measure.mjs` el 2026-09-09T20:12:11.625Z.
+Generado por `scripts/measure.mjs` el 2026-09-10T02:36:48.588Z.
 
-- Adaptador activo: `ALBATROSS_ADAPTER=mock`
+- Adaptador activo: `ALBATROSS_ADAPTER=qvac`
 - Referencia: `fixtures/voice-tests.json` (hoja **Voice Test Prompts** de `Dummy_Installed_Base_Hackathon.xlsx`)
 - Casos: 10
 - Dominio: `src/domain/index.ts`
@@ -14,26 +14,26 @@ y el adaptador puso un valor; se separa de **error** porque inventar es peor que
 
 | Campo | Acierto | Error | Relleno |
 | --- | ---: | ---: | ---: |
-| cliente | 0% (0/16) | 16 | 0 |
-| pais | 0% (0/16) | 16 | 0 |
-| ciudad | 0% (0/16) | 16 | 0 |
-| modalidad | 0% (0/16) | 16 | 0 |
-| cantidad | 0% (0/16) | 16 | 0 |
-| marca | 0% (0/16) | 16 | 0 |
-| edad | 0% (0/16) | 16 | 0 |
+| cliente | 88% (14/16) | 2 | 0 |
+| pais | 94% (15/16) | 0 | 1 |
+| ciudad | 94% (15/16) | 0 | 1 |
+| modalidad | 100% (16/16) | 0 | 0 |
+| cantidad | 88% (14/16) | 2 | 0 |
+| marca | 38% (6/16) | 0 | 10 |
+| edad | 100% (16/16) | 0 | 0 |
 
 ## Filas emitidas contra esperadas
 
 | Metrica | Valor |
 | --- | ---: |
 | Filas esperadas | 16 |
-| Filas emitidas | 0 |
-| Diferencia | -16 |
-| Casos con error del adaptador | 100% (10/10) |
+| Filas emitidas | 17 |
+| Diferencia | 1 |
+| Casos con error del adaptador | 0% (0/10) |
 
 ## Relleno de marca o modelo no mencionados
 
-**0% (0/10)** de los casos recibieron una marca o un modelo que el
+**60% (6/10)** de los casos recibieron una marca o un modelo que el
 enunciado no menciona. Cero es el objetivo: la hoja Agent Question Logic pide
 "If unknown, save as Unknown. Never force a guess."
 
@@ -41,23 +41,31 @@ enunciado no menciona. Cero es el objetivo: la hoja Agent Question Logic pide
 
 | Caso | ms | Filas esp./emit. | Resultado |
 | ---: | ---: | :---: | --- |
-| 1 | 0.1 | 2 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
-| 2 | 0.0 | 2 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
-| 3 | 0.0 | 1 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
-| 4 | 0.0 | 2 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
-| 5 | 0.1 | 1 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
-| 6 | 0.0 | 2 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
-| 7 | 0.0 | 2 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
-| 8 | 0.0 | 1 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
-| 9 | 0.0 | 2 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
-| 10 | 0.0 | 1 / 0 | UNSUPPORTED_INPUT: Use the transcript from the selected mock scenario. |
+| 1 | 2885.2 | 2 / 2 | relleno |
+| 2 | 3997.5 | 2 / 3 | relleno |
+| 3 | 2273.9 | 1 / 1 | relleno |
+| 4 | 2959.7 | 2 / 2 | ok |
+| 5 | 1845.0 | 1 / 1 | ok |
+| 6 | 3269.0 | 2 / 2 | relleno |
+| 7 | 2880.3 | 2 / 2 | relleno |
+| 8 | 1935.7 | 1 / 1 | ok |
+| 9 | 3287.4 | 2 / 2 | relleno |
+| 10 | 2270.4 | 1 / 1 | ok |
 
-Mediana 0.0 ms · minimo 0.0 ms · maximo 0.1 ms.
+Mediana 2885.2 ms · minimo 1845.0 ms · maximo 3997.5 ms.
 
 ## Distribucion de Status
 
-No disponible: src/domain/index.ts cargo correctamente, pero el adaptador no emitio ninguna fila sobre la cual derivar.
+| Status | Filas | Proporcion |
+| --- | ---: | ---: |
+| Estimated | 8 | 47% (8/17) |
+| Reported | 7 | 41% (7/17) |
+| Unknown | 2 | 12% (2/17) |
 
 ## Distribucion de Confidence
 
-No disponible: src/domain/index.ts cargo correctamente, pero el adaptador no emitio ninguna fila sobre la cual derivar.
+| Confidence | Filas | Proporcion |
+| --- | ---: | ---: |
+| Medium | 8 | 47% (8/17) |
+| High | 7 | 41% (7/17) |
+| Low | 2 | 12% (2/17) |
