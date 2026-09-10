@@ -23,7 +23,7 @@ npm.cmd run dev
 
 Si los archivos ya están en `models/`, la app los habilita sola. Sin pesos, Procesar queda deshabilitado hasta terminar la descarga.
 
-- `npm run models`: descarga Whisper y Qwen a `models/` (reanudable).
+- `npm run models`: descarga Whisper y Qwen a `models/` (salta los completos; uno a medias se rebaja entero).
 - `npm run dev`: inicia Vite y abre Electron; React se actualiza con HMR. Reinicia el comando después de editar el proceso principal o preload.
 - `npm run dev:web`: la misma UI en el navegador, sin IPC; las pantallas quedan vacías hasta que exista un backend HTTP.
 - `npm run build`: verifica tipos y compila interfaz y Electron.
