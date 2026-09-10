@@ -7,3 +7,4 @@ models/
 .env.*
 !.env.example
 qvac-integration-plan.md
+reports/*.png
