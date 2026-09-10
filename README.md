@@ -1,75 +1,145 @@
-# Philips — Installed Base Intelligence
+# Albatross
 
-Aplicación de escritorio Electron + React + Vite + TypeScript. La UI es la de Marco (`ui/cib-ui-5/cib-ui`): hospitales, captura, cobertura y panorama. Electron la sirve y habla con VisitService/QVAC por `window.philips`. El SDK está fijado en `@qvac/sdk@0.18.2`. Los pesos se descargan con `npm run models` o desde Capturar; no van en git.
+**Convierte lo que un ingeniero de campo vio en un hospital, dicho en voz alta, en una base instalada estructurada y auditable. Todo el procesamiento ocurre dentro de la laptop: el dato del cliente nunca sale del dispositivo.**
 
-## Base preexistente y atribución
+La mayoría de las herramientas de captura esperan a que alguien reporte. Albatross hace lo contrario: **calcula qué le falta averiguar de cada hospital y se lo dice antes de la visita.** La lista de clientes se ordena por los más incompletos primero, y cada ficha abre con "Antes de entrar, averiguá".
 
-Todo lo que no se escribió dentro del cronómetro del hackathon, con origen y alcance:
 
-- **Capa de dominio (`src/domain/`)**: escrita por Ricardo Solís antes de este repositorio y vendorizada sin modificar en el commit [`d086b85`](https://github.com/Abraham2106/project-philips-name-pending/commit/d086b857c3d73741446f638b28c4a5e10f2afb3d) (2244 líneas, 12 archivos: tipos, derivaciones de Confidence/Status/Estimated Installation Year, fusión de observaciones, certeza, perfiles, vocabulario, misiones, analítica y semilla). Cambios posteriores dentro del cronómetro: [`9c4c5f1`](https://github.com/Abraham2106/project-philips-name-pending/commit/9c4c5f1) y [`edc86d4`](https://github.com/Abraham2106/project-philips-name-pending/commit/edc86d4).
-- **Interfaz (`ui/cib-ui-5/cib-ui/`)**: aplicación Vite + React 18 de Marco, desarrollada como proyecto aparte e incorporada en el commit [`e69f503`](https://github.com/Abraham2106/project-philips-name-pending/commit/e69f50335e6647c4622617d8b1e0083afa742f16) (pantallas de clientes, captura, ficha, mapa y resumen; cliente HTTP y contrato en `docs/contrato-api.json`). El cableado al build de Electron se hizo después, dentro del cronómetro.
-- **Documento de diseño previo (`docs/architecture.md`)**: propuesta de arquitectura escrita antes del arranque del cronómetro y presente en el primer commit [`0adc37c`](https://github.com/Abraham2106/project-philips-name-pending/commit/0adc37cb20422ed3de059dcf805832770989dc2f), junto con el andamiaje Electron + Vite + TypeScript de ese mismo commit.
-- **Librerías de terceros**: `@qvac/sdk` 0.18.2 (Tether; inferencia local), React 19 y ReactDOM (raíz) / React 18 (UI), Electron 44, Vite 8 (raíz) / Vite 5 (UI), esbuild, TypeScript 7, Vitest 5 y `node:sqlite` de la biblioteca estándar de Node. Ver `package.json` y `ui/cib-ui-5/cib-ui/package.json`.
-- **Modelos**: Whisper large-v3-turbo (`ggml-large-v3-turbo.bin`, F16, de `ggerganov/whisper.cpp` en Hugging Face) y Qwen3-4B (`Qwen3-4B-Q4_K_M.gguf`, cuantización Q4_K_M, de `unsloth/Qwen3-4B-GGUF`). URLs y hashes de revisión fijados en `src/adapters/inference/qvac/model-pack.ts`.
-- **Plantillas públicas**: la raíz parte del andamiaje estándar Electron + Vite + React; la UI parte de la plantilla pública `react` de Vite (`npm create vite`). No se usó ninguna otra plantilla ni código de ejemplo público.
-- **Asistentes de programación basados en IA**: se usó Claude Code (Anthropic) como asistente de programación durante el hackathon para código, pruebas, scripts de medición y documentación, incluido el plugin de revisión `ponytail`. Todo lo generado se revisó y se commiteó por los autores humanos.
+---
 
-### Inferencia local vía `@qvac/sdk`
+## El problema
 
-Toda la inferencia (transcripción y extracción) corre en el dispositivo a través de `@qvac/sdk`; no hay llamadas a APIs de inferencia en la nube. La única red que usa la aplicación es la descarga de pesos. Puntos de llamada, con enlaces fijados al commit `1c6ab42`:
+Cada día, ingenieros de servicio, especialistas de aplicación y account managers entran a hospitales y ven equipos: cuántos resonadores hay, de qué marca, qué tan viejos. Ese conocimiento se queda en la cabeza de la gente, en notas sueltas o en un WhatsApp. La organización no lo tiene.
 
-- [`src/adapters/inference/qvac/sdk-client.ts`](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/sdk-client.ts#L33): única frontera con el SDK. `createSdkClient` importa `@qvac/sdk` ([L35](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/sdk-client.ts#L35)) y llama a `loadModel` (Whisper [L58-L59](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/sdk-client.ts#L58-L59) y Qwen [L64-L65](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/sdk-client.ts#L64-L65), con ruta local o descriptor del registro), `transcribe` ([L69](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/sdk-client.ts#L69)), `completion` ([L78](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/sdk-client.ts#L78); temp 0, seed 42, JSON schema en [L73-L77](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/sdk-client.ts#L73-L77)), `cancel` ([L84](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/sdk-client.ts#L84)), `unloadModel` ([L85](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/sdk-client.ts#L85)) y `close` ([L86](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/sdk-client.ts#L86)).
-- [`src/adapters/inference/qvac/qvac-inference-engine.ts`](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/qvac-inference-engine.ts#L18): implementa el puerto `InferenceEngine` sobre ese cliente: carga bajo demanda ([L64](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/qvac-inference-engine.ts#L64)), `transcribe` ([L108](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/qvac-inference-engine.ts#L108)), `extractObservations` ([L118](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/qvac-inference-engine.ts#L118); prompt y esquema de `schema.ts`) y la pregunta de seguimiento ([L131](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/qvac-inference-engine.ts#L131)).
-- [`src/bootstrap/desktop.ts`](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/bootstrap/desktop.ts#L15) y [`electron/main.cts`](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/electron/main.cts#L124): construyen el motor en el proceso principal de Electron y lo exponen al renderer por IPC ([`ipcMain.handle`](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/electron/main.cts#L29), `window.philips`).
-- [`scripts/measure.mjs`](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/scripts/measure.mjs#L155): harness de medición; crea el mismo cliente y motor para puntuar `fixtures/voice-tests.json`.
-- [`scripts/start-bare-worker.mjs`](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/scripts/start-bare-worker.mjs#L136): diagnóstico del worker Bare del SDK (`heartbeat`); no hace inferencia.
-- [`src/adapters/inference/qvac/model-pack.ts`](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/src/adapters/inference/qvac/model-pack.ts#L75) y [`scripts/download-models.mjs`](https://github.com/Abraham2106/project-philips-name-pending/blob/1c6ab42/scripts/download-models.mjs#L6-L10): descarga de pesos a `models/`; no llaman al SDK.
+Llenar un formulario después de cada visita no funciona: toma minutos que nadie tiene y produce descripciones inconsistentes. Y aunque funcionara, seguiría sin resolver el problema difícil, que es **saber qué es lo que no sabemos**.
 
-## Uso
+## La idea
 
-Requiere Node.js 22.17 o superior compatible con las dependencias instaladas.
+Un colega dicta veinte segundos al salir del hospital:
+
+> «Estuve en Hospital Alpha en São Paulo. Vi dos CT y tres MR. Dos de los MR parecen de unos nueve años, uno es bastante más nuevo.»
+
+Albatross transcribe, extrae los grupos de equipo, muestra lo que entendió para que la persona lo confirme, y actualiza la ficha del hospital. La certeza del sitio sube y su posición en la lista baja, porque ya hace falta menos.
+
+La siguiente persona que abra ese hospital no ve un formulario en blanco. Ve tres preguntas concretas, ordenadas por cuánto valen.
+
+## Cómo se ve
+
+| Antes de la visita | Después del dictado |
+| --- | --- |
+| ![Ficha del hospital](reports/profile-desktop.png) | ![Revisión de lo captado](reports/review-desktop.png) |
+
+Cuatro pantallas: **Hospitales** (ordenados por lo que falta), **Capturar** (dictado y revisión), **Cobertura** (región → país → ciudad → hospital) y **Panorama** (equipos por modalidad, base envejecida, sitios sin verificar).
+
+---
+
+## Lo que lo hace distinto
+
+**1. El sistema sabe qué le falta.** Un motor determinista compara lo conocido contra el perfil esperado del tipo de centro y ordena los huecos por peso de negocio, antigüedad del dato y contradicciones abiertas. La misma función genera las preguntas previas a la visita y las repreguntas durante la captura.
+
+**2. El modelo no puede inventar.** Cada campo extraído tiene que **citar textualmente el dictado**. Si la cita no aparece literal en la transcripción, la extracción se rechaza completa. No es un ruego en el prompt: es una validación que corre después del modelo y que se puede leer en veinte líneas de código.
+
+**3. Un dato ausente y un dato desconocido no son lo mismo.** Si nadie mencionó la marca, el campo queda `null`. Si la persona dijo "no sé la marca", queda `Unknown`. Son dos hechos distintos sobre el mundo y el sistema los trata distinto: el primero genera una pregunta, el segundo no se vuelve a preguntar a esa persona.
+
+**4. Los conflictos no se resuelven solos.** Si un colega reportó tres MR y otro reporta cuatro, no gana el más reciente. Se abre una contradicción visible que sube al tope de la lista de pendientes y que un humano decide.
+
+**5. Corre entero en la laptop.** Whisper Turbo para voz y Qwen3-4B para extracción, ambos en el dispositivo. Un hospital que no permite que sus datos salgan a un servidor externo puede usar esto tal como está, en el sótano, sin cobertura.
+
+---
+
+## Cómo funciona
+
+```
+voz  →  Whisper Turbo (local)  →  transcripción
+        ↓
+        Qwen3-4B (local, salida restringida por esquema JSON)
+        ↓
+        validación: ¿cada campo cita el dictado?  → si no, se rechaza
+        ↓
+        dominio: ¿dato nuevo, corroboración o conflicto?
+        ↓
+        el humano confirma lo captado
+        ↓
+        SQLite local  →  certeza recalculada  →  nuevas preguntas
+```
+
+**El modelo propone, el código determinista decide.** El LLM nunca escribe en la base ni ejecuta acciones: produce estructura bajo `responseFormat: json_schema` con `temp: 0` y `seed: 42`. Todo lo que decide qué es verdad son funciones puras y probadas.
+
+### Resultados medidos
+
+Con los modelos reales corriendo, contra los diez enunciados de referencia del reto:
+
+| | Modalidad | Cantidad | Marca | Edad | Latencia mediana |
+| --- | --- | --- | --- | --- | --- |
+| Inglés | 100% | 100% | 88% | 100% | 3.2 s |
+| Español | 100% | 88% | 81% | 100% | 3.4 s |
+
+Se mide aparte el **relleno**: cuántas veces el modelo puso un valor que nadie mencionó. Inventar es peor que callar. Detalle completo en [`REPORT.md`](REPORT.md) y [`REPORT.es.md`](REPORT.es.md), generados por `scripts/measure.mjs`.
+
+---
+
+## Correrlo
+
+Node.js 22.17+. Probado en Windows x64 con Vulkan.
 
 ```sh
 npm install
-npm run models
+npm run models   # ~4.1 GB de pesos, una sola vez
 npm run dev
 ```
 
-Los pesos (~4,1 GB: Whisper Turbo F16 + Qwen3 4B) no van en git. `npm run models` los baja a `models/` y salta lo que ya esté completo. En Capturar también hay un botón **Descargar modelos** con barra de progreso.
-
-Para inferencia local:
-
-```powershell
-$env:QVAC_ENABLE_MODELS = "1"
-npm.cmd run dev
-```
-
-Si los archivos ya están en `models/`, la app los habilita sola. Sin pesos, Procesar queda deshabilitado hasta terminar la descarga.
-
-- `npm run models`: descarga Whisper y Qwen a `models/` (salta los completos; uno a medias se rebaja entero).
-- `npm run dev`: inicia Vite y abre Electron; React se actualiza con HMR. Reinicia el comando después de editar el proceso principal o preload.
-- `npm run dev:web`: la misma UI en el navegador, sin IPC; las pantallas quedan vacías hasta que exista un backend HTTP.
-- `npm run build`: verifica tipos y compila interfaz y Electron.
-- `npm start`: abre Electron con el build local; requiere `npm run build` previamente.
-- `npm run smoke`: comprueba el build en una ventana Electron oculta y cierra automáticamente.
-
-Recorrido de la interfaz para el video (verificado el 2026-09-10 con Playwright sobre Electron): `npm run dev` levanta Vite en `http://127.0.0.1:5187` y abre Electron con `window.philips`; Capturar → escribir el enunciado → Procesar (la primera extracción carga Qwen, ~20 s; después ~3 s) → responder las tarjetas «Confirmá lo que entendí» → Guardar observación → Hospitales muestra el cliente y su ficha con la base instalada. Capturas de cada paso, registro de consola y el script del recorrido quedan en `reports/ui-walkthrough/` (no versionado). Sin Electron (`npm run dev:web`) no hay IPC y cada pantalla muestra «El servidor no responde».
-
-La interfaz no tiene acceso a Node: el preload expone solo `window.philips`. Fastify, sincronización P2P y el instalador no están implementados.
-
-- [Guía de validación conjunta](docs/qvac-validation.md)
-
-Medición de extracción (evaluador v2, `scripts/measure.mjs`; necesita los pesos en `models/`):
-
-- `node --experimental-transform-types scripts/measure.mjs`: diez casos en inglés en GPU → `REPORT.md` y `reports/extraction/<fecha>-en/run.json`.
-- `--es`: los mismos casos en español → `REPORT.es.md`.
-- `--cpu`: carga Qwen con `gpu_layers: 0` para medir sin GPU (laptop de campo) → `REPORT.cpu.md` / `REPORT.es.cpu.md`. Las cuatro configuraciones (inglés/español × GPU/CPU) se corrieron el 2026-09-10; la comparación está en `REPORT.md` y `REPORT.es.md`.
-- `--replay reports/extraction/<corrida>/run.json`: recalcula métricas sin inferencia.
-- `--self-check`: pruebas del evaluador, sin modelos.
+Sin los pesos la aplicación abre igual y **Procesar** queda deshabilitado; dentro de Capturar hay un botón de descarga con progreso. Verificación rápida sin modelos ni GPU:
 
 ```sh
-npm run test
+npm test        # 69 pruebas
 npm run typecheck
+npm run smoke   # arranca Electron, valida IPC y aislamiento, cierra solo
 ```
 
-La inferencia es solo QVAC. En PowerShell con scripts bloqueados, usar `npm.cmd`.
+---
+
+## Bajo el capó
+
+Electron + React + TypeScript, arquitectura hexagonal, un solo proceso. La dependencia apunta siempre hacia adentro:
+
+```
+src/domain/        reglas puras: fusión, conflictos, certeza, misiones
+src/application/   puertos y casos de uso; no conoce SDK, SQL ni transporte
+src/adapters/      QVAC y SQLite; implementan los puertos
+ui/                React; habla solo por el puente IPC
+src/bootstrap/     compone las dependencias concretas
+```
+
+**Estado y persistencia.** SQLite con WAL, transacciones `BEGIN IMMEDIATE`, concurrencia optimista por revisión y una tabla inmutable de aceptaciones. Procesar dos veces la misma observación no agrega evidencia, lo cual es requisito para poder replicar el registro más adelante.
+
+**Superficie de ataque.** `contextIsolation`, `sandbox`, `nodeIntegration: false`, validación de emisor y frame en cada canal IPC, CSP restrictiva, navegación y ventanas nuevas denegadas, permisos limitados al micrófono. El dictado se trata como dato no confiable y nunca como instrucción: el texto de campo no puede alterar el comportamiento del sistema, y aunque lo intentara, la salida está restringida por esquema y el modelo no tiene autoridad de escritura.
+
+**69 pruebas** cubren el dominio (fusión, conflictos, idempotencia, certeza), los contratos del adaptador QVAC (JSON inválido, alias de modalidad, cancelación, timeouts, recarga de modelos) y la integración con SQLite.
+
+---
+
+## Límites conocidos
+
+- Sincronización entre dispositivos: no implementada. El registro ya es determinista e idempotente, que es la parte difícil, pero el transporte no está.
+- No hay instalador empaquetado; se ejecuta desde el código.
+- La vista de cobertura usa bloques y puntos, no cartografía real: cualquier librería de mapas carga teselas desde internet y eso rompería la promesa de funcionar sin conexión.
+
+---
+
+## Atribución
+
+Inferencia con [`@qvac/sdk`](https://qvac.tether.io) 0.18.2 (Apache-2.0). Los pesos no se distribuyen aquí; se descargan de su fuente original: [Whisper large-v3-turbo](https://huggingface.co/ggerganov/whisper.cpp) (MIT) y [Qwen3-4B Q4_K_M](https://huggingface.co/unsloth/Qwen3-4B-GGUF) (Apache-2.0). Ningún modelo fue entrenado ni ajustado por el equipo.
+
+Interfaz con React 19 y Electron 44 (MIT); build con Vite y esbuild (MIT); TypeScript y pruebas con Vitest. `node:sqlite` y `node:crypto` son módulos integrados de Node 22. Sin librería de mapas.
+
+Los datos de ejemplo son ficticios y provienen del workbook entregado por la empresa que publica el desafío. No se usó información real de clientes.
+
+Todo el código de producto de este repositorio se escribió durante las 48 horas de la competencia, con asistentes de programación basados en IA. No se partió de una plantilla ni de un repositorio anterior del equipo.
+
+## Licencia
+
+Propietaria, todos los derechos reservados. Ver [LICENSE](LICENSE). Los jurados y organizadores del Decentralized AI Hackathon tienen permiso de evaluación durante el período de calificación.
+
+## Equipo
+
+Ricardo Solís Arias · Marco · Abraham · Sebastián
