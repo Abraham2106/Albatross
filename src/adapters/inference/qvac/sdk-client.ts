@@ -22,22 +22,27 @@ export async function createSdkClient(onProgress: (message: string) => void): Pr
   return {
     load(capability, source) {
       const onDownload = (p: { percentage?: number }) => onProgress('Preparando modelo ' + capability + (p.percentage === undefined ? '' : ': ' + Math.round(p.percentage) + '%'));
-      const pending = capability === 'stt'
-        ? sdk.loadModel({
-          modelSrc: source ?? localWeight(STT_FILE) ?? sdk.WHISPER_LARGE_V3_TURBO,
-          ...(source || localWeight(STT_FILE) ? { modelType: 'whispercpp-transcription' as const } : {}),
-          modelConfig: {
-            audio_format: 's16le', language: 'auto', strategy: 'greedy',
-            no_timestamps: true,
-            contextParams: { use_gpu: true, flash_attn: true },
-          }, onProgress: onDownload,
-        })
-        : sdk.loadModel({
-          modelSrc: source ?? localWeight(LLM_FILE) ?? sdk.QWEN3_4B_INST_Q4_K_M,
-          ...(source || localWeight(LLM_FILE) ? { modelType: 'llamacpp-completion' as const } : {}),
-          modelConfig: { ctx_size: 4096 }, onProgress: onDownload,
-        });
+      // Ruta local y descriptor del registro son sobrecargas distintas de loadModel:
+      // un modelType condicional en un solo objeto impide resolverlas.
+      const pending = capability === 'stt' ? loadStt(source ?? localWeight(STT_FILE)) : loadLlm(source ?? localWeight(LLM_FILE));
       return { requestId: pending.requestId, final: pending };
+
+      function loadStt(path?: string) {
+        const modelConfig = {
+          audio_format: 's16le' as const, language: 'auto', strategy: 'greedy' as const,
+          no_timestamps: true,
+          contextParams: { use_gpu: true, flash_attn: true },
+        };
+        return path
+          ? sdk.loadModel({ modelSrc: path, modelType: 'whispercpp-transcription', modelConfig, onProgress: onDownload })
+          : sdk.loadModel({ modelSrc: sdk.WHISPER_LARGE_V3_TURBO, modelConfig, onProgress: onDownload });
+      }
+      function loadLlm(path?: string) {
+        const modelConfig = { ctx_size: 4096 };
+        return path
+          ? sdk.loadModel({ modelSrc: path, modelType: 'llamacpp-completion', modelConfig, onProgress: onDownload })
+          : sdk.loadModel({ modelSrc: sdk.QWEN3_4B_INST_Q4_K_M, modelConfig, onProgress: onDownload });
+      }
     },
     transcribe(modelId, pcm) {
       const pending = sdk.transcribe({ modelId, audioChunk: Buffer.from(pcm), metadata: false });
