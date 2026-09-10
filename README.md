@@ -39,7 +39,7 @@ Los cronómetros de transcripción/procesamiento, los tiempos de carga y la vent
 
 **1. El sistema sabe qué le falta.** Un motor determinista compara lo conocido contra el perfil esperado del tipo de centro y ordena los huecos por peso de negocio, antigüedad del dato y contradicciones abiertas. La misma función genera las preguntas previas a la visita y las repreguntas durante la captura.
 
-**2. El modelo no puede inventar.** Cada campo extraído tiene que **citar textualmente el dictado**. Si la cita no aparece literal en la transcripción, la extracción se rechaza completa. No es un ruego en el prompt: es una validación que corre después del modelo y que se puede leer en veinte líneas de código.
+**2. Todo lo extraído cita el dictado.** Cada grupo guarda una **cita textual de la transcripción**, y la revisión la muestra en la tarjeta y resaltada en el texto. Si la cita del modelo no coincide literal, el código la reemplaza por el fragmento del dictado donde aparece ese equipo; nunca se guarda una cita que no esté en la transcripción. Y nada entra a la base sin que una persona confirme cada tarjeta.
 
 **3. Un dato ausente y un dato desconocido no son lo mismo.** Si nadie mencionó la marca, el campo queda `null`. Si la persona dijo "no sé la marca", queda `Unknown`. Son dos hechos distintos sobre el mundo y el sistema los trata distinto: el primero genera una pregunta, el segundo no se vuelve a preguntar a esa persona.
 
@@ -56,7 +56,7 @@ voz  →  Whisper Turbo (local)  →  transcripción
         ↓
         Qwen3-4B (local, salida restringida por esquema JSON)
         ↓
-        validación: ¿cada campo cita el dictado?  → si no, se rechaza
+        validación: ¿cumple el esquema?  ¿cada grupo cita el dictado?
         ↓
         dominio: ¿dato nuevo, corroboración o conflicto?
         ↓
@@ -131,6 +131,7 @@ src/bootstrap/     compone las dependencias concretas
 ## Límites conocidos
 
 - Sincronización entre dispositivos: no implementada. El registro ya es determinista e idempotente, que es la parte difícil, pero el transporte no está.
+- Las categorías de equipo son las seis del reto: MR, CT, Ultrasound, X-Ray, Patient Monitoring e Image Guided Therapy. Un equipo fuera de ellas (un ventilador, una máquina de anestesia) se asigna a la más parecida; hay que descartarlo en la revisión.
 - No hay instalador empaquetado; se ejecuta desde el código.
 - La vista de cobertura usa bloques y puntos, no cartografía real: cualquier librería de mapas carga teselas desde internet y eso rompería la promesa de funcionar sin conexión.
 
