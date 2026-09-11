@@ -6,12 +6,13 @@ export interface ComputerConnectionState {
   computerName: string | null;
   pairingCode: string | null;
   fingerprint: string | null;
-  isDemo: true;
+  isDemo: boolean;
 }
 
 export interface ComputerConnectionPort {
   getConnectionState(): ComputerConnectionState;
   pair(): Promise<ComputerConnectionState>;
+  acceptInvitation?(raw: string): Promise<ComputerConnectionState>;
   disconnect(): Promise<ComputerConnectionState>;
   subscribe(callback: (state: ComputerConnectionState) => void): () => void;
   setDemoStatus(status: PairingStatus): void;

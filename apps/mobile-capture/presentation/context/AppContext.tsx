@@ -5,7 +5,9 @@ import { ComputerConnectionState, PairingStatus } from '../../application/ports/
 interface AppContextValue {
   connection: ComputerConnectionState; captures: Capture[]; hospitals: Hospital[]; scenario: DemoScenario;
   setScenario: (scenario: DemoScenario) => void; setPairingStatus: (status: PairingStatus) => void;
-  pairComputer: () => Promise<void>; disconnectComputer: () => Promise<void>;
+  pairComputer: () => Promise<void>;
+  acceptInvitation: (raw: string) => Promise<void>;
+  disconnectComputer: () => Promise<void>;
   createCapture: (input: CaptureInput) => Promise<Capture>; updateDraft: (id: string, draft: EquipmentDraft) => Promise<Capture>;
   setStatus: (id: string, status: Capture['status']) => Promise<Capture>; acceptDraft: (id: string) => Promise<Capture>;
   cancelCapture: (id: string) => Promise<Capture>; resetDemo: () => void;
@@ -20,7 +22,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     connection, captures, hospitals, scenario,
     setScenario: (next) => { setScenarioState(next); container.captures.setScenario(next); if (next === 'offline') container.computer.setDemoStatus('disconnected'); },
     setPairingStatus: (status) => container.computer.setDemoStatus(status),
-    pairComputer: async () => { await container.computer.pair(); }, disconnectComputer: async () => { await container.computer.disconnect(); },
+    pairComputer: async () => { await container.computer.pair(); },
+    acceptInvitation: async (raw) => {
+      if (!container.computer.acceptInvitation) throw new Error('Este cliente no acepta invitaciones QVAC.');
+      await container.computer.acceptInvitation(raw);
+    },
+    disconnectComputer: async () => { await container.computer.disconnect(); },
     createCapture: (input) => container.captures.createCapture(input), updateDraft: (id, draft) => container.captures.updateDraft(id, draft),
     setStatus: (id, status) => container.captures.setStatus(id, status), acceptDraft: (id) => container.captures.acceptDraft(id),
     cancelCapture: (id) => container.captures.cancelCapture(id), resetDemo: () => { setScenarioState('normal'); container.captures.reset(); container.computer.setDemoStatus('disconnected'); },

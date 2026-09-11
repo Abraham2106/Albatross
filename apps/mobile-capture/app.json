@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -15,7 +15,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#6200EE"
+        "backgroundColor": "#00655B"
       },
       "package": "com.philips.albatross.mobilecapture"
     },
@@ -23,7 +23,19 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permite elegir fotos de placas de equipos para adjuntarlas a una observación.",
+          "cameraPermission": "Permite fotografiar placas de equipos para documentar una observación.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-image",
+      "expo-secure-store",
+      "expo-bare-kit",
+      ["expo-build-properties", { "android": { "minSdkVersion": 29 } }]
     ]
   }
 }
