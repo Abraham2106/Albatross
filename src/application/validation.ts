@@ -25,13 +25,16 @@ function bool(value: unknown): boolean { if (typeof value !== 'boolean') invalid
 function exactKeys(obj: Record<string, unknown>, keys: readonly string[]) {
   if (Object.keys(obj).length !== keys.length || keys.some(k => !Object.hasOwn(obj, k))) invalid('Campos inesperados o incompletos.');
 }
-export function validateCandidate(value: unknown, transcript?: string): ObservationCandidate {
+export function validateCandidate(value: unknown, transcript?: string, channel: 'Voice' | 'Manual' | 'Photo' = 'Manual'): ObservationCandidate {
   const v = record(value);
   exactKeys(v, ['modality', 'scope', 'quantity', 'brand', 'model', 'ageYears', 'ageDescription', 'quantityApproximate', 'ageApproximate', 'unknownFields', 'evidence']);
   if (!(MODALITIES as readonly unknown[]).includes(v.modality)) invalid('Modalidad no reconocida.');
   if (v.scope !== 'total' && v.scope !== 'group') invalid('Tipo de afirmación inválido.');
   const evidence = text(v.evidence, 'Evidencia', 2000);
-  if (transcript !== undefined && !transcript.includes(evidence)) invalid('La evidencia no aparece en la transcripción.');
+  const photoEvidence = /^photo:[a-f0-9]{64}$/.test(evidence);
+  if (channel === 'Photo') {
+    if (!photoEvidence && transcript !== undefined && !transcript.includes(evidence)) invalid('La evidencia no aparece en la nota ni en la foto.');
+  } else if (transcript !== undefined && !transcript.includes(evidence)) invalid('La evidencia no aparece en la transcripción.');
   if (!Array.isArray(v.unknownFields) || v.unknownFields.some(k => !['quantity', 'brand', 'model', 'ageYears'].includes(k)) || new Set(v.unknownFields).size !== v.unknownFields.length) invalid('Campos desconocidos inválidos.');
   const result: ObservationCandidate = {
     modality: v.modality as ObservationCandidate['modality'], scope: v.scope,

@@ -6,7 +6,7 @@ export interface HospitalInput { id?: string; name: string; country: string; cit
 export interface VisitDraft {
   id: string; site: Site; baseRevision: number; transcript: string;
   extraction: ExtractionData; provenance: InferenceProvenance; transcriptionProvenance?: InferenceProvenance;
-  createdAt: string; source: 'Voice' | 'Manual'; status: 'pending' | 'accepted'; identityWarning?: string;
+  createdAt: string; source: 'Voice' | 'Manual' | 'Photo'; status: 'pending' | 'accepted'; identityWarning?: string;
   timings?: { transcription?: InferenceTiming; extraction?: InferenceTiming };
 }
 export interface AcceptedVisit {
@@ -17,6 +17,7 @@ export interface VisitRepository {
   listSites(): Site[];
   getSite(id: string): { site: Site; revision: number } | undefined;
   saveDraft(draft: VisitDraft): void;
+  updateDraft(draft: VisitDraft): void;
   getDraft(id: string): VisitDraft | undefined;
   listDrafts(): VisitDraft[];
   accept(visit: AcceptedVisit): Site;

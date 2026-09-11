@@ -1,0 +1,971 @@
+{
+  "package": "1.4",
+  "at": "2026-09-11T05:53:27.822Z",
+  "sdk": "0.18.2",
+  "imagePath": "C:\\Users\\solan\\Documents\\Personal\\Hackathon\\QVAC-Bootcamp\\project-philips\\fixtures\\h1\\placa-sintetica.png",
+  "ok": true,
+  "image": {
+    "bytes": 40899,
+    "sha256": "a6f22a1e3db50bc12b9d9c03639484d0101ffe4df2ed78ef5940fdc4b2a2a38c"
+  },
+  "nvidia": {
+    "index": 1,
+    "name": "NVIDIA GeForce RTX 2050"
+  },
+  "resourcesBefore": {
+    "capabilities": {
+      "cpu": {
+        "status": "supported",
+        "value": {
+          "name": {
+            "status": "supported",
+            "value": "AMD Ryzen 5 7535HS with Radeon Graphics        ",
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "vendor": {
+            "status": "supported",
+            "value": "AMD",
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "architecture": {
+            "status": "supported",
+            "value": 2,
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "physicalCores": {
+            "status": "supported",
+            "value": 6,
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "logicalCores": {
+            "status": "supported",
+            "value": 12,
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "performanceCores": {
+            "status": "supported",
+            "value": 0,
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "efficiencyCores": {
+            "status": "supported",
+            "value": 0,
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "frequencyHz": {
+            "status": "supported",
+            "value": 3294000000,
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "cacheLineBytes": {
+            "status": "supported",
+            "value": 64,
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          }
+        },
+        "provenance": {
+          "source": "bare-cpu-info"
+        }
+      },
+      "memory": {
+        "totalBytes": {
+          "status": "supported",
+          "value": 16329850880,
+          "provenance": {
+            "source": "bare-cpu-info",
+            "scope": "system"
+          }
+        }
+      },
+      "gpus": {
+        "status": "supported",
+        "value": [
+          {
+            "id": "b845ed6f-1089-4be2-ae84-f57aaef26925",
+            "name": {
+              "status": "supported",
+              "value": "AMD Radeon(TM) Graphics",
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "vendor": {
+              "status": "supported",
+              "value": "AMD",
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "type": {
+              "status": "supported",
+              "value": 2,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "driverName": {
+              "status": "unavailable",
+              "reason": "Metric is unavailable"
+            },
+            "driverVersion": {
+              "status": "supported",
+              "value": "32.0.11020.16",
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "drivers": {
+              "vulkan": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "opencl": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "opengl": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "webgpu": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "metal": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "direct3d11": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "direct3d12": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "cuda": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "levelZero": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "rocm": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              }
+            },
+            "unifiedMemory": {
+              "status": "supported",
+              "value": false,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "memoryTotalBytes": {
+              "status": "unverified",
+              "reason": "GPU memory scope is unverified"
+            }
+          },
+          {
+            "id": "1069d752-3ee0-4d46-9784-9cb457a9e56b",
+            "name": {
+              "status": "supported",
+              "value": "NVIDIA GeForce RTX 2050",
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "vendor": {
+              "status": "supported",
+              "value": "NVIDIA",
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "type": {
+              "status": "supported",
+              "value": 2,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "driverName": {
+              "status": "unavailable",
+              "reason": "Metric is unavailable"
+            },
+            "driverVersion": {
+              "status": "supported",
+              "value": "32.0.15.9282",
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "drivers": {
+              "vulkan": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "opencl": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "opengl": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "webgpu": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "metal": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "direct3d11": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "direct3d12": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "cuda": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "levelZero": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "rocm": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              }
+            },
+            "unifiedMemory": {
+              "status": "supported",
+              "value": false,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "memoryTotalBytes": {
+              "status": "unverified",
+              "reason": "GPU memory scope is unverified"
+            }
+          }
+        ],
+        "provenance": {
+          "source": "bare-gpu-info"
+        }
+      }
+    },
+    "sample": {
+      "sampledAt": 1789106015874,
+      "cpu": {
+        "status": "supported",
+        "value": 9.62997585605e-312,
+        "provenance": {
+          "source": "bare-cpu-info",
+          "scope": "system"
+        }
+      },
+      "memory": {
+        "usedBytes": {
+          "status": "supported",
+          "value": 15268114432,
+          "provenance": {
+            "source": "bare-cpu-info",
+            "scope": "system"
+          }
+        },
+        "totalBytes": {
+          "status": "supported",
+          "value": 16329850880,
+          "provenance": {
+            "source": "bare-cpu-info",
+            "scope": "system"
+          }
+        }
+      },
+      "gpus": {
+        "status": "supported",
+        "value": [
+          {
+            "id": "b845ed6f-1089-4be2-ae84-f57aaef26925",
+            "compute": {
+              "status": "supported",
+              "value": 9.62997585605e-312,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "encode": {
+              "status": "supported",
+              "value": 0,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "decode": {
+              "status": "supported",
+              "value": 0,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "memoryUsedBytes": {
+              "status": "unverified",
+              "reason": "GPU memory usage scope is unverified"
+            },
+            "memoryTotalBytes": {
+              "status": "unverified",
+              "reason": "GPU memory scope is unverified"
+            },
+            "powerWatts": {
+              "status": "unavailable",
+              "reason": "Metric is unavailable"
+            },
+            "temperatureCelsius": {
+              "status": "unavailable",
+              "reason": "Metric is unavailable"
+            }
+          },
+          {
+            "id": "1069d752-3ee0-4d46-9784-9cb457a9e56b",
+            "compute": {
+              "status": "supported",
+              "value": 0,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "encode": {
+              "status": "supported",
+              "value": 0,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "decode": {
+              "status": "supported",
+              "value": 0,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "memoryUsedBytes": {
+              "status": "unverified",
+              "reason": "GPU memory usage scope is unverified"
+            },
+            "memoryTotalBytes": {
+              "status": "unverified",
+              "reason": "GPU memory scope is unverified"
+            },
+            "powerWatts": {
+              "status": "unavailable",
+              "reason": "Metric is unavailable"
+            },
+            "temperatureCelsius": {
+              "status": "unavailable",
+              "reason": "Metric is unavailable"
+            }
+          }
+        ],
+        "provenance": {
+          "source": "bare-gpu-info"
+        }
+      }
+    }
+  },
+  "loadMs": 35207,
+  "modelId": "62cb8c316b9e647b",
+  "inferMs": 35342,
+  "raw": "{\n  \"brand\": \"BluePeak Medical\",\n  \"model\": \"Aether 3T\",\n  \"modality\": \"Magnetic Resonance\",\n  \"serial\": \"BP-ABT-88421\",\n  \"manufactureDate\": \"2017-03\",\n  \"warnings\": [\"DEMO-FICTITIOUS-NOT-A-REAL-DEVICE\"]\n}",
+  "parsed": {
+    "brand": "BluePeak Medical",
+    "model": "Aether 3T",
+    "modality": "Magnetic Resonance",
+    "serial": "BP-ABT-88421",
+    "manufactureDate": "2017-03",
+    "warnings": [
+      "DEMO-FICTITIOUS-NOT-A-REAL-DEVICE"
+    ]
+  },
+  "expected": {
+    "brand": "BluePeak Medical",
+    "model": "Aether 3T",
+    "modality": "Magnetic Resonance",
+    "serial": "BP-A3T-88421",
+    "manufactureDate": "2017-03"
+  },
+  "stats": {
+    "timeToFirstToken": 32839.394,
+    "tokensPerSecond": 79.39489140827754,
+    "cacheTokens": 0,
+    "promptTokens": 511,
+    "generatedTokens": 93,
+    "emittedTokens": 93,
+    "avgConcurrentSeq": 1,
+    "backendDevice": "gpu"
+  },
+  "resourcesAfter": {
+    "capabilities": {
+      "cpu": {
+        "status": "supported",
+        "value": {
+          "name": {
+            "status": "supported",
+            "value": "AMD Ryzen 5 7535HS with Radeon Graphics        ",
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "vendor": {
+            "status": "supported",
+            "value": "AMD",
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "architecture": {
+            "status": "supported",
+            "value": 2,
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "physicalCores": {
+            "status": "supported",
+            "value": 6,
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "logicalCores": {
+            "status": "supported",
+            "value": 12,
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "performanceCores": {
+            "status": "supported",
+            "value": 0,
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "efficiencyCores": {
+            "status": "supported",
+            "value": 0,
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "frequencyHz": {
+            "status": "supported",
+            "value": 3294000000,
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          },
+          "cacheLineBytes": {
+            "status": "supported",
+            "value": 64,
+            "provenance": {
+              "source": "bare-cpu-info"
+            }
+          }
+        },
+        "provenance": {
+          "source": "bare-cpu-info"
+        }
+      },
+      "memory": {
+        "totalBytes": {
+          "status": "supported",
+          "value": 16329850880,
+          "provenance": {
+            "source": "bare-cpu-info",
+            "scope": "system"
+          }
+        }
+      },
+      "gpus": {
+        "status": "supported",
+        "value": [
+          {
+            "id": "b845ed6f-1089-4be2-ae84-f57aaef26925",
+            "name": {
+              "status": "supported",
+              "value": "AMD Radeon(TM) Graphics",
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "vendor": {
+              "status": "supported",
+              "value": "AMD",
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "type": {
+              "status": "supported",
+              "value": 2,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "driverName": {
+              "status": "unavailable",
+              "reason": "Metric is unavailable"
+            },
+            "driverVersion": {
+              "status": "supported",
+              "value": "32.0.11020.16",
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "drivers": {
+              "vulkan": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "opencl": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "opengl": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "webgpu": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "metal": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "direct3d11": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "direct3d12": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "cuda": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "levelZero": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "rocm": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              }
+            },
+            "unifiedMemory": {
+              "status": "supported",
+              "value": false,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "memoryTotalBytes": {
+              "status": "unverified",
+              "reason": "GPU memory scope is unverified"
+            }
+          },
+          {
+            "id": "1069d752-3ee0-4d46-9784-9cb457a9e56b",
+            "name": {
+              "status": "supported",
+              "value": "NVIDIA GeForce RTX 2050",
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "vendor": {
+              "status": "supported",
+              "value": "NVIDIA",
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "type": {
+              "status": "supported",
+              "value": 2,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "driverName": {
+              "status": "unavailable",
+              "reason": "Metric is unavailable"
+            },
+            "driverVersion": {
+              "status": "supported",
+              "value": "32.0.15.9282",
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "drivers": {
+              "vulkan": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "opencl": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "opengl": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "webgpu": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "metal": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "direct3d11": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "direct3d12": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "cuda": {
+                "status": "supported",
+                "value": true,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "levelZero": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              },
+              "rocm": {
+                "status": "supported",
+                "value": false,
+                "provenance": {
+                  "source": "bare-gpu-info"
+                }
+              }
+            },
+            "unifiedMemory": {
+              "status": "supported",
+              "value": false,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "memoryTotalBytes": {
+              "status": "unverified",
+              "reason": "GPU memory scope is unverified"
+            }
+          }
+        ],
+        "provenance": {
+          "source": "bare-gpu-info"
+        }
+      }
+    },
+    "sample": {
+      "sampledAt": 1789106086492,
+      "cpu": {
+        "status": "supported",
+        "value": 0.7550711809397359,
+        "provenance": {
+          "source": "bare-cpu-info",
+          "scope": "system"
+        }
+      },
+      "memory": {
+        "usedBytes": {
+          "status": "supported",
+          "value": 15663951872,
+          "provenance": {
+            "source": "bare-cpu-info",
+            "scope": "system"
+          }
+        },
+        "totalBytes": {
+          "status": "supported",
+          "value": 16329850880,
+          "provenance": {
+            "source": "bare-cpu-info",
+            "scope": "system"
+          }
+        }
+      },
+      "gpus": {
+        "status": "supported",
+        "value": [
+          {
+            "id": "b845ed6f-1089-4be2-ae84-f57aaef26925",
+            "compute": {
+              "status": "supported",
+              "value": 0.1722182148653986,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "encode": {
+              "status": "supported",
+              "value": 0,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "decode": {
+              "status": "supported",
+              "value": 0,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "memoryUsedBytes": {
+              "status": "unverified",
+              "reason": "GPU memory usage scope is unverified"
+            },
+            "memoryTotalBytes": {
+              "status": "unverified",
+              "reason": "GPU memory scope is unverified"
+            },
+            "powerWatts": {
+              "status": "unavailable",
+              "reason": "Metric is unavailable"
+            },
+            "temperatureCelsius": {
+              "status": "unavailable",
+              "reason": "Metric is unavailable"
+            }
+          },
+          {
+            "id": "1069d752-3ee0-4d46-9784-9cb457a9e56b",
+            "compute": {
+              "status": "supported",
+              "value": 0.1444214050573761,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "encode": {
+              "status": "supported",
+              "value": 0,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "decode": {
+              "status": "supported",
+              "value": 0,
+              "provenance": {
+                "source": "bare-gpu-info",
+                "scope": "device"
+              }
+            },
+            "memoryUsedBytes": {
+              "status": "unverified",
+              "reason": "GPU memory usage scope is unverified"
+            },
+            "memoryTotalBytes": {
+              "status": "unverified",
+              "reason": "GPU memory scope is unverified"
+            },
+            "powerWatts": {
+              "status": "unavailable",
+              "reason": "Metric is unavailable"
+            },
+            "temperatureCelsius": {
+              "status": "unavailable",
+              "reason": "Metric is unavailable"
+            }
+          }
+        ],
+        "provenance": {
+          "source": "bare-gpu-info"
+        }
+      }
+    }
+  },
+  "totalMs": 78682
+}

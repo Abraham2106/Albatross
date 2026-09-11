@@ -8,3 +8,4 @@ models/
 !.env.example
 qvac-integration-plan.md
 reports/*.png
+.worktrees/

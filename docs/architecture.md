@@ -13,7 +13,7 @@
 - Vista de base instalada por cliente y agregación por hospital, ciudad y país.
 - Estados de observación: `Confirmed`, `Reported`, `Estimated` y `Unknown`.
 
-La sincronización entre dispositivos y la captura por foto no forman parte de la implementación actual. Son extensiones posibles, no dependencias del flujo mínimo.
+La sincronización entre dispositivos no forma parte de la implementación actual. La foto de placa es un extra del brief y hoy vive en dos piezas separadas. En el escritorio, `CaptureService` y `QvacPlateVisionEngine` leen una placa con VisionPsy Nano Flash Q4_K_M y fusionan el resultado con la nota, detrás del interruptor `QVAC_ENABLE_VISION`, apagado por defecto. En el celular, `apps/mobile-capture/` es un cliente Expo SDK 57 con React Native 0.86.3 orientado a Android, que todavía usa adaptadores demo: no ejecuta modelos, no habla P2P y no escribe en SQLite. El escritorio sigue siendo la fuente de verdad. Ver [`apps/mobile-capture/ARCHITECTURE.md`](../apps/mobile-capture/ARCHITECTURE.md).
 
 Las consultas en lenguaje natural siguen la misma regla que la extracción: Qwen traduce la pregunta a un filtro JSON cuyos países, ciudades y marcas solo pueden salir de la base guardada, `coerceQueryFilter` descarta toda restricción que la pregunta no nombre (un estado, "viejo", un número), `validateQueryFilter` lo valida y `applyQuery` filtra en código. Quitar una etiqueta vuelve a filtrar sin llamar al modelo; ningún número del resultado sale de Qwen.
 
@@ -120,4 +120,7 @@ Además, `scripts/measure.mjs` ejecuta una medición explícita contra modelos Q
 - Falta una prueba documentada de punta a punta con audio real: micrófono → Whisper local → Qwen local → revisión → SQLite.
 - La precisión de extracción depende del modelo local; antes de la demo se debe ensayar con frases representativas y revisar las tarjetas antes de guardar.
 - No hay empaquetador o instalador de distribución; la aplicación se ejecuta desde el repositorio.
-- No hay sincronización entre equipos ni OCR/foto.
+- No hay sincronización entre equipos.
+- La lectura de placa corre en el proceso de la aplicación y registra la procedencia que devuelve el motor visual, hoy `local`. La inferencia delegada peer-to-peer solo está probada entre dos procesos Node en `scripts/h1-p2p-provider.mjs` y `scripts/h1-p2p-consumer.mjs`, no dentro del flujo de Capturar.
+- El cliente móvil no está conectado al peer: `ComputerPeerService` solo atiende llamadas en proceso y no escucha en red.
+- Sobre la placa sintética el modelo leyó la serie `BP-ABT-88421` frente a `BP-A3T-88421`: un carácter erróneo en una imagen nítida. La revisión humana es obligatoria.

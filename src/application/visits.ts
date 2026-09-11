@@ -21,7 +21,7 @@ export interface ReviewInput {
   draftId: string; author: string; visitedAt: string; candidates: readonly ObservationCandidate[];
   identityAcknowledged: boolean;
 }
-export function toDomainCandidate(c: ObservationCandidate, siteId: string, author: string, timestamp: string, channel: 'Voice' | 'Manual'): Candidate {
+export function toDomainCandidate(c: ObservationCandidate, siteId: string, author: string, timestamp: string, channel: 'Voice' | 'Manual' | 'Photo'): Candidate {
   return {
     siteId, modality: c.modality, scope: c.scope, extractedAge: true,
     ...(c.ageDescription ? { groupLabel: c.ageDescription.toLowerCase() } : {}),
@@ -79,7 +79,7 @@ export class VisitService {
       backend: result.backend,
     });
   }
-  private writeDraft(site: Site, baseRevision: number, transcript: string, result: InferenceResult<ExtractionData>, source: 'Voice' | 'Manual', transcriptionProvenance?: InferenceProvenance, extraWarning?: string, transcriptionTiming?: InferenceResult<unknown>['timing']) {
+  private writeDraft(site: Site, baseRevision: number, transcript: string, result: InferenceResult<ExtractionData>, source: 'Voice' | 'Manual' | 'Photo', transcriptionProvenance?: InferenceProvenance, extraWarning?: string, transcriptionTiming?: InferenceResult<unknown>['timing']) {
     const mention = result.data.mentionedHospital;
     const differences = (['name', 'country', 'city'] as const).filter(k => mention[k] && mention[k]!.trim().toLocaleLowerCase() !== site[k].trim().toLocaleLowerCase());
     const identityWarning = extraWarning
@@ -126,7 +126,7 @@ export class VisitService {
     if (!Number.isFinite(date.getTime()) || date.getTime() > new Date(this.now()).getTime() + 60000 || date.getUTCFullYear() < 1900) invalid('Fecha de visita inválida o futura.');
     if (!Array.isArray(input.candidates) || input.candidates.length > 50) invalid('Lista de grupos inválida.');
     // Human edits may change values, but evidence must still point to the original dictation.
-    const candidates = input.candidates.map(c => validateCandidate(c, draft.transcript));
+    const candidates = input.candidates.map(c => validateCandidate(c, draft.transcript, draft.source));
     if (draft.identityWarning && input.identityAcknowledged !== true) invalid('Confirma que revisaste el hospital de destino.');
     const current = this.repository.getSite(draft.site.id);
     if ((current?.revision ?? 0) !== draft.baseRevision) throw new InferenceError('CONFLICT', 'El perfil cambió mientras revisabas. Genera un nuevo borrador con el texto conservado.');

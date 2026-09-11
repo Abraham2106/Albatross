@@ -1,0 +1,15 @@
+{
+  "id": "placa-sintetica-h1",
+  "fictional": true,
+  "file": "placa-sintetica.png",
+  "fields": {
+    "brand": "BluePeak Medical",
+    "model": "Aether 3T",
+    "modality": "Magnetic Resonance",
+    "serial": "BP-A3T-88421",
+    "manufactureDate": "2017-03",
+    "installDate": null,
+    "quantity": null
+  },
+  "notes": "Etiqueta ficticia para la prueba 1.4. Fabricación no equivale a instalación. Una foto no determina cantidad."
+}

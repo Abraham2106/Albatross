@@ -202,4 +202,47 @@ describe('cadena de custodia sobre SQLite', () => {
     expect(migrated.verifyIntegrity()).toMatchObject({ ok: true, entries: 1 });
     migrated.close();
   });
+
+  it('una base v2 conserva observaciones al pasar a capturas v3', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'cib-v2-'));
+    dirs.push(dir);
+    const file = join(dir, 'v2.sqlite');
+    const legacy = new DatabaseSync(file);
+    const site = createSite({ id: 'h1', name: 'Hospital DemoCare Horizon', city: 'Sao Paulo', country: 'Brazil' });
+    legacy.exec(`
+      CREATE TABLE sites (id TEXT PRIMARY KEY, revision INTEGER NOT NULL, snapshot TEXT NOT NULL);
+      CREATE TABLE visit_drafts (id TEXT PRIMARY KEY, status TEXT NOT NULL CHECK(status IN ('pending','accepted')), payload TEXT NOT NULL);
+      CREATE TABLE accepted_visits (
+        draft_id TEXT PRIMARY KEY REFERENCES visit_drafts(id),
+        site_id TEXT NOT NULL REFERENCES sites(id),
+        payload TEXT NOT NULL,
+        chain_index INTEGER NOT NULL DEFAULT 0,
+        prev_hash TEXT NOT NULL DEFAULT '',
+        hash TEXT NOT NULL DEFAULT ''
+      );
+      CREATE UNIQUE INDEX accepted_visits_chain ON accepted_visits(chain_index);
+      PRAGMA user_version = 2;
+    `);
+    legacy.prepare('INSERT INTO sites(id,revision,snapshot) VALUES(?,?,?)').run(site.id, 1, JSON.stringify(site));
+    legacy.close();
+
+    const migrated = new SqliteVisitRepository(file);
+    expect(migrated.listSites()).toEqual([site]);
+    expect(migrated.verifyIntegrity()).toMatchObject({ ok: true, entries: 0 });
+    migrated.saveJob({
+      id: 'capture-note-01', deviceId: 'device-field-1', idempotencyKey: 'capture-note-01',
+      state: 'queued', revision: 1, hospital: { name: site.name, country: site.country, city: site.city },
+      note: 'Vi dos CT.', capturedAt: '2026-09-11T12:00:00.000Z', receivedAt: '2026-09-11T12:00:00.000Z',
+      attachments: [], error: null, draftId: null, visitDraft: null, plate: null, evidence: [],
+      provenance: {
+        schemaVersion: 1, author: 'Ana', captureDeviceId: 'device-field-1', executorPeerId: 'desktop-peer-local',
+        capturedAt: '2026-09-11T12:00:00.000Z', receivedAt: '2026-09-11T12:00:00.000Z', processedAt: null,
+        model: null, modelVersion: '0.18.2', inference: null, attachmentHashes: [],
+      },
+      payloadHash: 'a'.repeat(64),
+    });
+    expect(migrated.getJob('capture-note-01')?.state).toBe('queued');
+    expect(migrated.listSites()[0]?.id).toBe('h1');
+    migrated.close();
+  });
 });
