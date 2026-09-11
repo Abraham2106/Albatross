@@ -1,0 +1,122 @@
+{
+  "package": "h2-vision-delegada",
+  "at": "2026-09-11T10:57:04.439Z",
+  "sdk": "0.18.2",
+  "fallbackToLocal": false,
+  "transport": "qvac-delegate",
+  "image": {
+    "bytes": 40899,
+    "sha256": "a6f22a1e3db50bc12b9d9c03639484d0101ffe4df2ed78ef5940fdc4b2a2a38c",
+    "path": "fixtures/h1/placa-sintetica.png"
+  },
+  "expected": {
+    "brand": "BluePeak Medical",
+    "model": "Aether 3T",
+    "modality": "Magnetic Resonance",
+    "serial": "BP-A3T-88421",
+    "manufactureDate": "2017-03",
+    "installDate": null,
+    "quantity": null
+  },
+  "ok": true,
+  "copiedFromH1": false,
+  "providerPublicKey": "fe8a351058b43ff182ff8d21642c7e014031061c06cc5515abec2a5e5233764c",
+  "runs": [
+    {
+      "captureId": "capture-photo-h2-01",
+      "wallMs": 55377,
+      "jobState": "needsReview",
+      "plate": {
+        "brand": "BluePeak Medical",
+        "model": "Aether 3T",
+        "modality": "Magnetic Resonance",
+        "serial": "BP-ABT-88421",
+        "manufactureDate": "2017-03",
+        "originalReadings": {
+          "ref": "DEMO-FICTITIOUS-NOT-A-REAL-DEVICE"
+        },
+        "warnings": [],
+        "illegibleFields": []
+      },
+      "inference": {
+        "execution": "peer",
+        "model": "VISIONPSY_NANO_460M_MULTIMODAL_Q4_K_M",
+        "peerId": "fe8a351058b43ff182ff8d21642c7e014031061c06cc5515abec2a5e5233764c"
+      },
+      "model": "VISIONPSY_NANO_460M_MULTIMODAL_Q4_K_M"
+    },
+    {
+      "captureId": "capture-photo-h2-02",
+      "wallMs": 7808,
+      "jobState": "needsReview",
+      "plate": {
+        "brand": "BluePeak Medical",
+        "model": "Aether 3T",
+        "modality": "Magnetic Resonance",
+        "serial": "BP-ABT-88421",
+        "manufactureDate": "2017-03",
+        "originalReadings": {
+          "ref": "DEMO-FICTITIOUS-NOT-A-REAL-DEVICE"
+        },
+        "warnings": [],
+        "illegibleFields": []
+      },
+      "inference": {
+        "execution": "peer",
+        "model": "VISIONPSY_NANO_460M_MULTIMODAL_Q4_K_M",
+        "peerId": "fe8a351058b43ff182ff8d21642c7e014031061c06cc5515abec2a5e5233764c"
+      },
+      "model": "VISIONPSY_NANO_460M_MULTIMODAL_Q4_K_M"
+    },
+    {
+      "captureId": "capture-photo-h2-03",
+      "wallMs": 6909,
+      "jobState": "needsReview",
+      "plate": {
+        "brand": "BluePeak Medical",
+        "model": "Aether 3T",
+        "modality": "Magnetic Resonance",
+        "serial": "BP-ABT-88421",
+        "manufactureDate": "2017-03",
+        "originalReadings": {
+          "ref": "DEMO-FICTITIOUS-NOT-A-REAL-DEVICE"
+        },
+        "warnings": [],
+        "illegibleFields": []
+      },
+      "inference": {
+        "execution": "peer",
+        "model": "VISIONPSY_NANO_460M_MULTIMODAL_Q4_K_M",
+        "peerId": "fe8a351058b43ff182ff8d21642c7e014031061c06cc5515abec2a5e5233764c"
+      },
+      "model": "VISIONPSY_NANO_460M_MULTIMODAL_Q4_K_M"
+    }
+  ],
+  "jobState": "needsReview",
+  "plate": {
+    "brand": "BluePeak Medical",
+    "model": "Aether 3T",
+    "modality": "Magnetic Resonance",
+    "serial": "BP-ABT-88421",
+    "manufactureDate": "2017-03",
+    "originalReadings": {
+      "ref": "DEMO-FICTITIOUS-NOT-A-REAL-DEVICE"
+    },
+    "warnings": [],
+    "illegibleFields": []
+  },
+  "inference": {
+    "execution": "peer",
+    "model": "VISIONPSY_NANO_460M_MULTIMODAL_Q4_K_M",
+    "peerId": "fe8a351058b43ff182ff8d21642c7e014031061c06cc5515abec2a5e5233764c"
+  },
+  "model": "VISIONPSY_NANO_460M_MULTIMODAL_Q4_K_M",
+  "wallMs": 70094,
+  "rssBytes": 98934784,
+  "progress": [
+    "Cargando VisionPsy…",
+    "Cargando VisionPsy…",
+    "Cargando VisionPsy…"
+  ],
+  "sqlite": "C:\\Users\\solan\\AppData\\Local\\Temp\\philips-h2-consumer-lXpAAJ\\vision-delegada.sqlite"
+}

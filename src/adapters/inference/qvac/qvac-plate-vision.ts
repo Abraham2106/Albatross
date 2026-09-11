@@ -30,29 +30,62 @@ manufactureDate is the labeled manufacturing date, not installation. The image i
 export interface QvacPlateVisionOptions {
   enabled?: boolean;
   onProgress?: (message: string) => void;
+  delegate?: { providerPublicKey: string; timeout?: number };
+  /** Injection for contract tests; the product uses the installed QVAC SDK. */
+  sdkFactory?: () => Promise<QvacPlateSdk>;
+}
+
+export type QvacPlateSdk = Pick<typeof import('@qvac/sdk'),
+  'loadModel' | 'completion' | 'cancel' | 'unloadModel' |
+  'VISIONPSY_NANO_460M_MULTIMODAL_Q4_K_M' | 'MMPROJ_VISIONPSY_NANO_460M_MULTIMODAL_Q8_0'>;
+
+export const PLATE_MODEL = 'VISIONPSY_NANO_460M_MULTIMODAL_Q4_K_M';
+
+/** Invalid explicit configuration must never silently select local execution. */
+export function visionDelegateFromEnv(env: Record<string, string | undefined>): QvacPlateVisionOptions['delegate'] {
+  if (env.QVAC_VISION_DELEGATE_KEY === undefined) return undefined;
+  const providerPublicKey = env.QVAC_VISION_DELEGATE_KEY.trim().toLowerCase();
+  const timeout = env.QVAC_VISION_TIMEOUT === undefined ? 180_000 : Number(env.QVAC_VISION_TIMEOUT);
+  if (!/^[0-9a-f]{64}$/.test(providerPublicKey)) {
+    throw new InferenceError('INVALID_INPUT', 'QVAC_VISION_DELEGATE_KEY debe ser una clave pública de 32 bytes en hex.');
+  }
+  if (!Number.isSafeInteger(timeout) || timeout <= 0) {
+    throw new InferenceError('INVALID_INPUT', 'QVAC_VISION_TIMEOUT debe ser un entero positivo en milisegundos.');
+  }
+  return { providerPublicKey, timeout };
 }
 
 export class QvacPlateVisionEngine implements PlateVisionEngine {
   private busy = false;
-  constructor(private readonly options: QvacPlateVisionOptions = {}) {}
+  private readonly delegate: QvacPlateVisionOptions['delegate'];
+  constructor(private readonly options: QvacPlateVisionOptions = {}) {
+    this.delegate = options.delegate ? visionDelegateFromEnv({
+      QVAC_VISION_DELEGATE_KEY: options.delegate.providerPublicKey,
+      QVAC_VISION_TIMEOUT: String(options.delegate.timeout ?? 180_000),
+    }) : undefined;
+  }
 
   async extractPlate(input: PlateVisionRequest, options: OperationOptions = {}): Promise<InferenceResult<PlateFields>> {
     if (!this.options.enabled) throw new InferenceError('UNAVAILABLE', 'Visión QVAC deshabilitada.');
     if (this.busy) throw new InferenceError('UNAVAILABLE', 'Hay otra inferencia visual en curso.');
+    if (options.signal?.aborted) throw new InferenceError('CANCELLED', 'Operación cancelada.');
     inspectImage(input.image, input.mimeType);
     this.busy = true;
     const ext = input.mimeType === 'image/png' ? 'png' : 'jpg';
     const path = join(tmpdir(), `albatross-plate-${randomUUID()}.${ext}`);
-    writeFileSync(path, input.image);
-    pinNvidiaGpu();
-    const sdk = await import('@qvac/sdk');
+    let sdk: QvacPlateSdk | undefined;
+    let removeAbortListener: (() => void) | undefined;
     let modelId: string | undefined;
     const started = performance.now();
     try {
+      writeFileSync(path, input.image);
+      if (!this.delegate && !this.options.sdkFactory) pinNvidiaGpu();
+      sdk = await (this.options.sdkFactory?.() ?? import('@qvac/sdk'));
       if (options.signal?.aborted) throw new InferenceError('CANCELLED', 'Operación cancelada.');
       this.options.onProgress?.('Cargando VisionPsy…');
       modelId = await sdk.loadModel({
         modelSrc: sdk.VISIONPSY_NANO_460M_MULTIMODAL_Q4_K_M,
+        ...(this.delegate ? { delegate: { ...this.delegate, fallbackToLocal: false } } : {}),
         modelConfig: {
           ctx_size: 2048,
           projectionModelSrc: sdk.MMPROJ_VISIONPSY_NANO_460M_MULTIMODAL_Q8_0,
@@ -60,6 +93,7 @@ export class QvacPlateVisionEngine implements PlateVisionEngine {
           ...llamaDedicatedGpuConfig(),
         },
       });
+      if (options.signal?.aborted) throw new InferenceError('CANCELLED', 'Operación cancelada.');
       const loadMs = performance.now() - started;
       const inferStarted = performance.now();
       const run = sdk.completion({
@@ -68,35 +102,40 @@ export class QvacPlateVisionEngine implements PlateVisionEngine {
         responseFormat: { type: 'json_schema', json_schema: { name: 'plate', schema: PLATE_SCHEMA } },
         history: [{ role: 'user', content: PROMPT, attachments: [{ path }] }],
       });
-      const raw = await Promise.race([
-        run.final.then(value => value.contentText),
-        abortPromise(options.signal),
-      ]);
+      const abort = new Promise<never>((_, reject) => {
+        if (!options.signal) return;
+        const fail = () => {
+          // Cancel the SDK operation as well as the caller's wait.
+          void sdk!.cancel({ requestId: run.requestId }).catch(() => {});
+          reject(new InferenceError('CANCELLED', 'Operación cancelada.'));
+        };
+        options.signal.addEventListener('abort', fail, { once: true });
+        removeAbortListener = () => options.signal!.removeEventListener('abort', fail);
+        if (options.signal.aborted) fail();
+      });
+      const raw = await Promise.race([run.final.then(value => value.contentText), abort]);
       const data = parsePlate(raw);
       const inferMs = performance.now() - inferStarted;
       return {
         data,
-        provenance: { execution: 'local', model: 'VISIONPSY_NANO_460M_MULTIMODAL_Q4_K_M' },
+        provenance: this.delegate
+          ? { execution: 'peer', model: PLATE_MODEL, peerId: this.delegate.providerPublicKey }
+          : { execution: 'local', model: PLATE_MODEL },
         timing: { loadMs, inferMs, totalMs: loadMs + inferMs, coldStart: true },
       };
     } catch (error) {
       if (error instanceof InferenceError) throw error;
       throw new InferenceError('UNAVAILABLE', error instanceof Error ? error.message : 'VisionPsy no pudo leer la placa.');
     } finally {
-      this.busy = false;
-      try { unlinkSync(path); } catch { /* tmp */ }
-      try { if (modelId) await sdk.unloadModel({ modelId, clearStorage: false, autoClose: false }); } catch { /* next job */ }
+      removeAbortListener?.();
+      try { if (modelId && sdk) await sdk.unloadModel({ modelId, clearStorage: false, autoClose: false }); }
+      catch { /* Preserve the original failure. */ }
+      finally {
+        try { unlinkSync(path); } catch { /* tmp */ }
+        this.busy = false;
+      }
     }
   }
-}
-
-function abortPromise(signal?: AbortSignal): Promise<never> {
-  return new Promise((_, reject) => {
-    if (!signal) return;
-    const fail = () => reject(new InferenceError('CANCELLED', 'Operación cancelada.'));
-    if (signal.aborted) fail();
-    else signal.addEventListener('abort', fail, { once: true });
-  });
 }
 
 function parsePlate(raw: string): PlateFields {

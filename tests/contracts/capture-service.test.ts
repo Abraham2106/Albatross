@@ -165,6 +165,21 @@ describe('captura: persistencia, transferencia y aceptación', () => {
     expect(repo.getDraft(job.draftId!)?.status).toBe('accepted');
   });
 
+  it('persiste procedencia peer del motor sin sustituirla por la sesión de captura', async () => {
+    const peerProvenance = { execution: 'peer' as const, model: 'vision-contract', peerId: 'ab'.repeat(32) };
+    const vision: PlateVisionEngine = { async extractPlate(input) {
+      const result = await fakeVision().extractPlate(input);
+      return { ...result, provenance: peerProvenance };
+    } };
+    const { capture, repo } = setup(':memory:', fakeEngine(), vision);
+    const receipt = capture.submit(session, photoPayload());
+    uploadAll(capture, receipt.captureId);
+    const job = await capture.process(session, receipt.captureId);
+    expect(repo.getDraft(job.draftId!)?.provenance).toEqual(peerProvenance);
+    expect(repo.getJob(job.id)?.provenance.inference).toEqual(peerProvenance);
+    expect(job.provenance.modelVersion).toBeNull();
+  });
+
   it('un fallo de visión deja el trabajo en failed y el siguiente puede correr', async () => {
     let fail = true;
     const vision: PlateVisionEngine = {
@@ -173,11 +188,14 @@ describe('captura: persistencia, transferencia y aceptación', () => {
         return fakeVision().extractPlate(input);
       },
     };
-    const { capture } = setup(':memory:', fakeEngine(), vision);
+    const { capture, repo } = setup(':memory:', fakeEngine(), vision);
     const a = capture.submit(session, photoPayload('capture-photo-01'));
     uploadAll(capture, a.captureId);
     await expect(capture.process(session, a.captureId)).rejects.toMatchObject({ code: 'UNAVAILABLE' });
     expect(capture.status(session, a.captureId).state).toBe('failed');
+    expect(repo.getAttachmentBytes(a.captureId, 'photo-main-1')).toEqual(new Uint8Array(PNG_1x1));
+    const note = capture.submit(session, notePayload('note-with-vision-unavailable'));
+    expect((await capture.process(session, note.captureId)).state).toBe('needsReview');
     capture.retry(session, a.captureId);
     fail = false;
     const recovered = await capture.process(session, a.captureId);
