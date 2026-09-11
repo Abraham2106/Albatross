@@ -1,15 +1,17 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomBytes } from 'node:crypto';
 import { VisitService } from '../application/visits';
 import { CibService } from '../application/cib-service';
 import { CaptureService } from '../application/capture-service';
 import { SqliteVisitRepository } from '../adapters/persistence/visit-repository';
 import { QvacInferenceEngine, QvacPlateVisionEngine } from '../adapters/inference/qvac';
+import { visionDelegateFromEnv } from '../adapters/inference/qvac/qvac-plate-vision';
 import { downloadAll, inspectModels, writeLlmChoice, type LlmVariant } from '../adapters/inference/qvac/model-pack';
 import { probeHardware } from '../adapters/inference/qvac/hardware-probe';
 import { pinNvidiaGpu } from '../adapters/inference/qvac/prefer-nvidia';
 import { evaluateFit } from '../application/qvac-fit';
 import { DeviceRegistry } from '../adapters/peer/device-registry';
 import { ComputerPeerService } from '../adapters/peer/computer-peer';
+import { ensurePeerSeed, invitationCard, QvacProviderService } from '../adapters/peer/qvac-provider';
 import { InferenceError, type OperationOptions } from '../application/ports/inference-engine';
 import type { ResidenceMode } from '../application/ports/qvac-fit';
 import type { RuntimeStatus } from '../application/desktop-api';
@@ -27,13 +29,21 @@ export function createRuntime(filename: string, env: Record<string, string | und
   const service = new VisitService(engine, repository, randomUUID);
   const cib = new CibService(service);
   const visionEnabled = env.QVAC_ENABLE_VISION === '1';
-  const vision = visionEnabled ? new QvacPlateVisionEngine({ enabled: modelsEnabled, onProgress }) : undefined;
+  const vision = visionEnabled ? new QvacPlateVisionEngine({
+    enabled: true, onProgress, delegate: visionDelegateFromEnv(env),
+  }) : undefined;
   const capture = new CaptureService(service, repository, engine, vision);
   const peerId = env.QVAC_PEER_ID?.trim() || 'desktop-peer-local';
-  const peerKey = env.QVAC_PEER_PUBLIC_KEY?.trim() || 'desktop-dev-key';
+  const peerKey = env.QVAC_PEER_PUBLIC_KEY?.trim() || 'pending';
   const pairing = new DeviceRegistry(repository, peerKey);
-  const peerEnabled = env.QVAC_ENABLE_PEER === '1';
-  const peer = peerEnabled ? new ComputerPeerService(capture, pairing, peerId) : undefined;
+  const peer = new ComputerPeerService(capture, pairing, peerId);
+  const envSeed = env.QVAC_HYPERSWARM_SEED?.trim();
+  const seed = envSeed && /^[0-9a-f]{64}$/i.test(envSeed)
+    ? envSeed.toLowerCase()
+    : env.QVAC_PEER_SEED_FILE?.trim()
+      ? ensurePeerSeed(env.QVAC_PEER_SEED_FILE.trim())
+      : randomBytes(32).toString('hex');
+  const provider = new QvacProviderService({ seed, onProgress });
   const status: RuntimeStatus = { mode: 'qvac', modelsEnabled, message: statusMessage(modelsEnabled, engine.loaded()) };
   const refreshStatus = () => {
     status.message = statusMessage(status.modelsEnabled, engine.loaded());
@@ -75,6 +85,41 @@ export function createRuntime(filename: string, env: Record<string, string | und
       refreshStatus();
       return { ...evaluateFit(probeHardware({ pin: pinNvidiaGpu }), { llm: inspectModels().llm }), residence: engine.residence(), loaded: engine.loaded() };
     },
-    async close() { try { await engine.close?.(); } finally { repository.close(); } },
+    peerStatus() {
+      const live = provider.status();
+      return { ...live, invitation: null as ReturnType<typeof invitationCard> | null };
+    },
+    async startPeer() {
+      await engine.dropLoaded('stt');
+      await engine.dropLoaded('llm');
+      const live = await provider.start();
+      if (live.publicKey) pairing.setPublicKey(live.publicKey);
+      refreshStatus();
+      return live;
+    },
+    async loadPeerVision() {
+      const live = await provider.loadVision();
+      refreshStatus();
+      return live;
+    },
+    async stopPeer() {
+      const live = await provider.stop();
+      refreshStatus();
+      return live;
+    },
+    invitePeer() {
+      const live = provider.status();
+      if (!live.publicKey) throw new InferenceError('UNAVAILABLE', 'Arrancá el provider QVAC antes de invitar al celular.');
+      pairing.setPublicKey(live.publicKey);
+      const invite = pairing.invite();
+      return invitationCard(invite.providerPublicKey, invite.token, invite.expiresAt);
+    },
+    async close() {
+      try { await provider.stop(); }
+      finally {
+        try { await engine.close?.(); }
+        finally { repository.close(); }
+      }
+    },
   };
 }

@@ -137,6 +137,37 @@ export const fijarLlm = (llm) => {
   return viaDesktop(() => api.setLlm(llm));
 };
 
+export const estadoPeer = () => {
+  const api = desktop();
+  return api?.peerStatus ? viaDesktop(() => api.peerStatus()) : Promise.resolve(null);
+};
+
+export const arrancarPeer = () => {
+  const api = desktop();
+  if (!api?.startPeer) throw new Error('SIN_BACKEND');
+  lastRequestId = crypto.randomUUID();
+  return viaDesktop(() => api.startPeer(lastRequestId));
+};
+
+export const cargarVisionPeer = () => {
+  const api = desktop();
+  if (!api?.loadPeerVision) throw new Error('SIN_BACKEND');
+  lastRequestId = crypto.randomUUID();
+  return viaDesktop(() => api.loadPeerVision(lastRequestId));
+};
+
+export const detenerPeer = () => {
+  const api = desktop();
+  if (!api?.stopPeer) throw new Error('SIN_BACKEND');
+  return viaDesktop(() => api.stopPeer());
+};
+
+export const invitarPeer = () => {
+  const api = desktop();
+  if (!api?.invitePeer) throw new Error('SIN_BACKEND');
+  return viaDesktop(() => api.invitePeer());
+};
+
 export const confirmar = (observacionId, respuestas) => {
   const api = desktop();
   if (api) {

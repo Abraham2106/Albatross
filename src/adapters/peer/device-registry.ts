@@ -1,6 +1,7 @@
 import { InferenceError } from '../../application/ports/inference-engine';
 import type { PeerStore } from '../../application/ports/peer-store';
 import { hexId } from '../../application/capture-protocol';
+import { text } from '../../application/validation';
 import {
   assertAuthorized, assertInvitationOpen, createInvitation, pairingQrPayload, parsePairingQr,
   type Invitation,
@@ -9,11 +10,20 @@ import {
 export class DeviceRegistry {
   constructor(
     private readonly store: PeerStore,
-    private readonly providerPublicKey: string,
+    private providerPublicKey: string,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
+  setPublicKey(publicKey: string) {
+    this.providerPublicKey = text(publicKey, 'Clave del peer', 200);
+  }
+
+  currentPublicKey() { return this.providerPublicKey; }
+
   invite(ttlMs = 5 * 60 * 1000): Invitation {
+    if (!this.providerPublicKey || this.providerPublicKey === 'pending') {
+      throw new InferenceError('UNAVAILABLE', 'Arrancá el provider QVAC antes de invitar al celular.');
+    }
     const invite = createInvitation(this.now(), ttlMs, this.providerPublicKey);
     this.store.saveInvitation(invite.token, invite.expiresAt, invite);
     return invite;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { estadoFit, estadoModelos, fijarResidencia, fijarLlm, hayEscritorio, precargarModelos, descargarModelos, onProgreso } from '../api/client.js';
+import { estadoFit, estadoModelos, fijarResidencia, fijarLlm, hayEscritorio, precargarModelos, descargarModelos, onProgreso, estadoPeer, arrancarPeer, cargarVisionPeer, detenerPeer, invitarPeer } from '../api/client.js';
 import FitModelos, { pieFit } from '../components/FitModelos.jsx';
 import { DEMO_LAPTOP, evaluateFit } from '../../../../../src/application/qvac-fit.ts';
 import { Sol, Luna } from '../components/Iconos.jsx';
@@ -24,6 +24,8 @@ export default function Configuracion({ activa = false, tema, onTema, onEstado }
   const [progreso, setProgreso] = useState('');
   const [pct, setPct] = useState(0);
   const [error, setError] = useState('');
+  const [peer, setPeer] = useState(null);
+  const [invite, setInvite] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -41,6 +43,9 @@ export default function Configuracion({ activa = false, tema, onTema, onEstado }
     estadoModelos()
       .then((value) => { if (alive) setPack(value); })
       .catch(() => { if (alive) setPack(null); });
+    estadoPeer()
+      .then((value) => { if (alive) setPeer(value); })
+      .catch(() => { if (alive) setPeer(null); });
     const off = onProgreso(({ message }) => {
       setProgreso(message);
       const next = percentFrom(message);
@@ -94,6 +99,21 @@ export default function Configuracion({ activa = false, tema, onTema, onEstado }
     }
   }
 
+  async function moverPeer(accion) {
+    setError('');
+    setBusy(true);
+    try {
+      if (accion === 'start') setPeer(await arrancarPeer());
+      else if (accion === 'vision') setPeer(await cargarVisionPeer());
+      else if (accion === 'stop') { setPeer(await detenerPeer()); setInvite(null); }
+      else setInvite(await invitarPeer());
+    } catch (e) {
+      setError(e.message === 'SIN_BACKEND' ? 'El provider QVAC solo arranca en Electron.' : e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function activarLlm(llm) {
     setError('');
     setBusy(true);
@@ -134,6 +154,46 @@ export default function Configuracion({ activa = false, tema, onTema, onEstado }
             <p className="fila-s">Midiendo CPU, RAM y GPU…</p>
           )}
           {error && <p className="error" role="alert">{error}</p>}
+        </section>
+
+        <section className="seccion config-seccion">
+          <h2>Celular · QVAC P2P</h2>
+          <p className="fila-s">
+            Esto publica un provider Hyperswarm, no un servidor HTTP. Expo Go no alcanza: el celular necesita un development build con Bare.
+          </p>
+          {peer?.running ? (
+            <p className="fila-s">En DHT · huella {peer.fingerprint}{peer.visionLoaded ? ' · VisionPsy cargado' : ''}</p>
+          ) : (
+            <p className="fila-s">Apagado. El celular no puede delegar hasta que arranque.</p>
+          )}
+          <div className="peer-acciones">
+            {!peer?.running ? (
+              <button type="button" className="btn btn-sec" data-testid="cib-peer-start" disabled={busy || !hayEscritorio()} onClick={() => { void moverPeer('start'); }}>
+                Arrancar provider
+              </button>
+            ) : (
+              <>
+                {!peer.visionLoaded && (
+                  <button type="button" className="btn btn-sec" data-testid="cib-peer-vision" disabled={busy} onClick={() => { void moverPeer('vision'); }}>
+                    Cargar VisionPsy
+                  </button>
+                )}
+                <button type="button" className="btn btn-sec" data-testid="cib-peer-invite" disabled={busy} onClick={() => { void moverPeer('invite'); }}>
+                  Crear invitación
+                </button>
+                <button type="button" className="btn btn-sec" data-testid="cib-peer-stop" disabled={busy} onClick={() => { void moverPeer('stop'); }}>
+                  Detener
+                </button>
+              </>
+            )}
+          </div>
+          {invite && (
+            <div className="invite-card" data-testid="cib-peer-qr">
+              <p className="fila-s">Pegá este JSON en el celular. Caduca. No es una URL.</p>
+              <textarea readOnly rows={5} value={JSON.stringify({ v: invite.v, k: invite.k, t: invite.t, e: invite.e })} />
+              <p className="fila-s">Verificación {invite.fingerprint}</p>
+            </div>
+          )}
         </section>
 
         <section className="seccion config-seccion">

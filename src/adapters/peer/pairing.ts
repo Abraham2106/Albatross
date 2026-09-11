@@ -20,7 +20,7 @@ export function invitationFingerprint(providerPublicKey: string, token: string):
 }
 
 export function createInvitation(now: Date, ttlMs: number, providerPublicKey: string): Invitation {
-  const key = text(providerPublicKey, 'Clave del peer', 128);
+  const key = text(providerPublicKey, 'Clave del peer', 200);
   const token = randomBytes(24).toString('base64url');
   const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
   return { token, expiresAt, providerPublicKey: key, fingerprint: invitationFingerprint(key, token) };
@@ -44,5 +44,5 @@ export function parsePairingQr(value: unknown): { providerPublicKey: string; tok
   if (!value || typeof value !== 'object' || Array.isArray(value)) invalid('QR inválido.');
   const v = value as Record<string, unknown>;
   if (v.v !== 1) invalid('QR de otra versión.');
-  return { providerPublicKey: text(v.k, 'Clave', 128), token: text(v.t, 'Invitación', 128), expiresAt: text(v.e, 'Expiración', 50) };
+  return { providerPublicKey: text(v.k, 'Clave', 200), token: text(v.t, 'Invitación', 128), expiresAt: text(v.e, 'Expiración', 50) };
 }

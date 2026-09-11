@@ -13,6 +13,19 @@ export interface ModelPackStatus {
   items: readonly { name: string; label: string; file: string; ready: boolean; bytes: number; expected: number; optional?: boolean }[];
   loaded?: { stt: boolean; llm: boolean };
 }
+export interface PeerInvitationCard {
+  v: 1;
+  k: string;
+  t: string;
+  e: string;
+  fingerprint: string;
+}
+export interface PeerProviderStatus {
+  running: boolean;
+  publicKey: string | null;
+  fingerprint: string | null;
+  visionLoaded: boolean;
+}
 export interface OpenWavResult {
   name: string;
   audio: Uint8Array;
@@ -48,5 +61,10 @@ export interface DesktopApi {
   fit(): Promise<Result<QvacFitReport>>;
   setResidence(mode: ResidenceMode): Promise<Result<QvacFitReport>>;
   setLlm(llm: LlmVariant): Promise<Result<ModelPackStatus>>;
+  peerStatus(): Promise<Result<PeerProviderStatus>>;
+  startPeer(requestId: string): Promise<Result<PeerProviderStatus>>;
+  loadPeerVision(requestId: string): Promise<Result<PeerProviderStatus>>;
+  stopPeer(): Promise<Result<PeerProviderStatus>>;
+  invitePeer(): Promise<Result<PeerInvitationCard>>;
 }
 declare global { interface Window { philips?: DesktopApi } }

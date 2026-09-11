@@ -159,6 +159,11 @@ function setupHandlers() {
     if (llm !== '4b' && llm !== '1.7b') invalid('Modelo inválido.');
     return runtime!.setLlm(llm);
   });
+  handle('peer-status', () => runtime!.peerStatus());
+  handle('start-peer', (value, event) => operation(event, value, () => runtime!.startPeer()));
+  handle('load-peer-vision', (value, event) => operation(event, value, () => runtime!.loadPeerVision()));
+  handle('stop-peer', () => runtime!.stopPeer());
+  handle('invite-peer', () => runtime!.invitePeer());
 }
 function boundsPath(name = 'window-bounds.json') {
   return path.join(app.getPath('userData'), name);
@@ -335,7 +340,7 @@ app.on('before-quit', event => {
 });
 app.whenReady().then(async () => {
   runtime = createRuntime(smokeTest ? ':memory:' : path.join(app.getPath('userData'), 'philips-visits.sqlite'),
-    smokeTest ? {} : process.env,
+    smokeTest ? {} : { ...process.env, QVAC_PEER_SEED_FILE: path.join(app.getPath('userData'), 'qvac-hyperswarm.seed') },
     message => {
       if (quitting) return;
       if (active) sendProgress(active.sender, active.id, message);

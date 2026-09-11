@@ -31,6 +31,11 @@ const api: DesktopApi = {
   fit: () => ipcRenderer.invoke('philips:fit'),
   setResidence: mode => ipcRenderer.invoke('philips:set-residence', { mode }),
   setLlm: llm => ipcRenderer.invoke('philips:set-llm', { llm }),
+  peerStatus: () => ipcRenderer.invoke('philips:peer-status'),
+  startPeer: requestId => ipcRenderer.invoke('philips:start-peer', { requestId }),
+  loadPeerVision: requestId => ipcRenderer.invoke('philips:load-peer-vision', { requestId }),
+  stopPeer: () => ipcRenderer.invoke('philips:stop-peer'),
+  invitePeer: () => ipcRenderer.invoke('philips:invite-peer'),
   onProgress: listener => {
     const handler = (_event: Electron.IpcRendererEvent, value: { requestId: string; message: string }) => listener(value);
     ipcRenderer.on('philips:progress', handler);
