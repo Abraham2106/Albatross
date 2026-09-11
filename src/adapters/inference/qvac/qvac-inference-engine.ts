@@ -4,6 +4,7 @@ import { wavToPcm, SAMPLE_RATE } from '../../../application/audio';
 import { EXTRACTION_PROMPT, EXTRACTION_SCHEMA, QUERY_PROMPT, querySchema } from './schema';
 import { coerceExtraction, coerceQueryFilter, parseModelJson } from './parse-output';
 import { createSdkClient, type BackendTrace, type QvacClient, type RequestRun } from './sdk-client';
+import { activeLlm } from './model-pack';
 
 export interface QvacOptions {
   enabled?: boolean;
@@ -11,6 +12,7 @@ export interface QvacOptions {
   llmSource?: string;
   timeoutMs?: number;
   loadTimeoutMs?: number;
+  residence?: 'sequential' | 'hot';
   onProgress?: (message: string) => void;
   onBackend?: (trace: BackendTrace) => void;
   clientFactory?: () => Promise<QvacClient>;
@@ -27,7 +29,35 @@ export class QvacInferenceEngine implements InferenceEngine {
   private warming?: Promise<unknown>;
   constructor(private readonly options: QvacOptions = {}) {}
   enable() { this.options.enabled = true; }
+  async dropLoaded(capability: 'stt' | 'llm') {
+    const id = this.models.get(capability);
+    if (!id) return;
+    if (this.busy) throw new InferenceError('UNAVAILABLE', 'Hay otra operación en curso.');
+    if (this.closed || !this.client) {
+      this.models.delete(capability);
+      this.modelBackends.delete(capability);
+      return;
+    }
+    const client = await this.openClient();
+    await client.unload(id);
+    this.models.delete(capability);
+    this.modelBackends.delete(capability);
+  }
   loaded() { return { stt: this.models.has('stt'), llm: this.models.has('llm') }; }
+  residence() { return this.options.residence === 'hot' ? 'hot' as const : 'sequential' as const; }
+  async setResidence(mode: 'sequential' | 'hot') {
+    this.options.residence = mode;
+    if (mode === 'hot' || this.models.size <= 1) return;
+    const blocked = this.unavailable();
+    if (blocked) throw blocked;
+    const client = await this.openClient();
+    const drop: 'stt' | 'llm' = this.models.has('stt') ? 'llm' : 'stt';
+    const id = this.models.get(drop);
+    if (!id) return;
+    await client.unload(id);
+    this.models.delete(drop);
+    this.modelBackends.delete(drop);
+  }
   private async openClient() {
     this.client ??= (this.options.clientFactory ?? (() => createSdkClient(m => this.options.onProgress?.(m), undefined, trace => {
       this.lastBackend = { device: trace.selectedDevice, name: trace.selectedBackend, ...(trace.graphicsApi ? { graphicsApi: trace.graphicsApi } : {}) };
@@ -71,13 +101,15 @@ export class QvacInferenceEngine implements InferenceEngine {
   private async model(client: QvacClient, capability: 'stt' | 'llm', signal: AbortSignal) {
     const known = this.models.get(capability);
     if (known) return known;
-    // Release the other native model before allocating this one (4 GB VRAM).
-    for (const [other, id] of this.models) {
-      if (other !== capability) {
-        await client.unload(id);
-        this.models.delete(other);
-        this.modelBackends.delete(other);
-        checkCancelled(signal);
+    if (this.residence() !== 'hot') {
+      // Release the other native model before allocating this one (4 GB VRAM).
+      for (const [other, id] of this.models) {
+        if (other !== capability) {
+          await client.unload(id);
+          this.models.delete(other);
+          this.modelBackends.delete(other);
+          checkCancelled(signal);
+        }
       }
     }
     this.options.onProgress?.('Cargando modelo ' + capability + '…');
@@ -101,7 +133,7 @@ export class QvacInferenceEngine implements InferenceEngine {
   async warm(capabilities: Array<'stt' | 'llm'> = ['stt'], options: OperationOptions = {}): Promise<{ stt: boolean; llm: boolean }> {
     const wanted = [...new Set(capabilities.filter(c => c === 'stt' || c === 'llm'))];
     if (!wanted.length) wanted.push('stt');
-    if (wanted.length > 1) throw new InferenceError('INVALID_INPUT', 'Precarga un solo modelo a la vez.');
+    if (wanted.length > 1 && this.residence() !== 'hot') throw new InferenceError('INVALID_INPUT', 'Precarga un solo modelo a la vez.');
     if (this.warming) {
       await this.warming.catch(() => {});
       return this.warm(wanted, options);
@@ -109,9 +141,10 @@ export class QvacInferenceEngine implements InferenceEngine {
     const blocked = this.unavailable();
     if (blocked) throw blocked;
     checkCancelled(options.signal);
-    const keep = wanted[0]!;
-    const other = keep === 'stt' ? 'llm' : 'stt';
-    if (this.models.has(keep) && !this.models.has(other)) return this.loaded();
+    const already = this.residence() === 'hot'
+      ? wanted.every(capability => this.models.has(capability))
+      : this.models.has(wanted[0]!) && !this.models.has(wanted[0] === 'stt' ? 'llm' : 'stt');
+    if (already) return this.loaded();
     this.busy = true;
     const controller = new AbortController();
     this.controller = controller;
@@ -124,9 +157,11 @@ export class QvacInferenceEngine implements InferenceEngine {
           checkCancelled(controller.signal);
           await this.model(client, capability, controller.signal);
         }
-        this.options.onProgress?.(wanted.includes('llm') && this.models.has('llm')
-          ? 'Qwen en memoria · listo'
-          : 'Whisper en memoria · listo');
+        this.options.onProgress?.(this.models.has('stt') && this.models.has('llm')
+          ? 'Whisper y Qwen en memoria · listo'
+          : wanted.includes('llm') && this.models.has('llm')
+            ? 'Qwen en memoria · listo'
+            : 'Whisper en memoria · listo');
         return this.loaded();
       } catch (error) {
         if (error instanceof InferenceError) throw error;
@@ -170,7 +205,7 @@ export class QvacInferenceEngine implements InferenceEngine {
         const backend = this.lastBackend ?? this.modelBackends.get(capability);
         return {
           data,
-          provenance: { execution: 'local' as const, model: capability === 'stt' ? this.options.sttSource ?? 'WHISPER_LARGE_V3_TURBO' : this.options.llmSource ?? 'QWEN3_4B_INST_Q4_K_M' },
+          provenance: { execution: 'local' as const, model: capability === 'stt' ? this.options.sttSource ?? 'WHISPER_LARGE_V3_TURBO' : this.options.llmSource ?? activeLlm().name },
           timing: { loadMs: t1 - t0, inferMs: t2 - t1, totalMs: t2 - t0, coldStart },
           ...(backend ? { backend } : {}),
         };

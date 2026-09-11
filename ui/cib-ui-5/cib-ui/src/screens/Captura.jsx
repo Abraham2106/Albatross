@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { extraer, confirmar, descargarModelos, estadoModelos, onProgreso, cancelar, hayEscritorio, abrirVentanaWhisper, precargarModelos } from '../api/client.js';
+import { extraer, confirmar, descargarModelos, estadoModelos, estadoFit, onProgreso, cancelar, hayEscritorio, abrirVentanaWhisper, precargarModelos } from '../api/client.js';
 import Pipeline from '../components/Pipeline.jsx';
+import { pieFit } from '../components/FitModelos.jsx';
 import { marcarCitas } from '../components/citas.mjs';
 import { MOTIVO } from '../components/Estado.jsx';
 import { DEVELOPMENT_TOOLS } from '../../../../../src/ui/development-tools.ts';
@@ -29,6 +30,7 @@ export default function Captura({ visita, onListo, onEstado }) {
   const [error, setError] = useState('');
   const [guardado, setGuardado] = useState(false);
   const [pack, setPack] = useState(undefined);
+  const [fit, setFit] = useState(null);
   const [bajando, setBajando] = useState(false);
   const [progreso, setProgreso] = useState('');
   const [pct, setPct] = useState(0);
@@ -58,6 +60,9 @@ export default function Captura({ visita, onListo, onEstado }) {
     estadoModelos()
       .then((value) => { if (alive) setPack(value); })
       .catch(() => { if (alive) setPack(null); });
+    estadoFit()
+      .then((value) => { if (alive) setFit(value); })
+      .catch(() => { if (alive) setFit(null); });
     const off = onProgreso(({ message }) => {
       setProgreso(message);
       if (/transcribiendo|extrayendo|cargando modelo (stt|llm)/i.test(message)) setPipelineProgress(message);
@@ -71,10 +76,10 @@ export default function Captura({ visita, onListo, onEstado }) {
   useEffect(() => {
     if (bajando) onEstado?.(progreso || 'Descargando modelos…');
     else if (cargando) onEstado?.(progreso || 'Procesando en el dispositivo…');
-    else if (pack?.ready) onEstado?.('Modelos en disco. Se cargan al procesar.');
+    else if (pack?.ready) onEstado?.(pieFit(fit) || 'Modelos en disco. Se cargan al procesar.');
     else if (pack && !pack.ready) onEstado?.('Faltan modelos · descargalos en Capturar');
     else onEstado?.('Sin conexión · en el dispositivo');
-  }, [bajando, cargando, pack, progreso, onEstado]);
+  }, [bajando, cargando, pack, progreso, onEstado, fit]);
 
   useEffect(() => {
     if (visita) setTexto((t) => (t.trim() ? t : `Estuve en ${visita.nombre}, ${visita.ciudad}. `));
@@ -160,12 +165,17 @@ export default function Captura({ visita, onListo, onEstado }) {
         setRms(frame.rms);
         setInputRate(frame.inputRate);
       });
-      if (hayEscritorio() && pack?.ready && !warmPromise.current && (!pack.loaded?.stt || pack.loaded?.llm)) {
-        setWarming(true);
-        warmPromise.current = precargarModelos(['stt'])
-          .then(loaded => { if (mounted.current && loaded) setPack(prev => ({ ...prev, loaded })); })
-          .catch(e => { if (mounted.current) setError('No se pudo preparar Whisper. Procesar reintentará. ' + e.message); })
-          .finally(() => { warmPromise.current = null; if (mounted.current) setWarming(false); });
+      if (hayEscritorio() && pack?.ready && !warmPromise.current) {
+        const sequentialSwap = fit?.residence !== 'hot' && pack.loaded?.llm;
+        const needWarm = !pack.loaded?.stt || sequentialSwap || (fit?.residence === 'hot' && !pack.loaded?.llm);
+        if (needWarm) {
+          setWarming(true);
+          const capabilities = fit?.residence === 'hot' ? ['stt', 'llm'] : ['stt'];
+          warmPromise.current = precargarModelos(capabilities)
+            .then(loaded => { if (mounted.current && loaded) setPack(prev => ({ ...prev, loaded })); })
+            .catch(e => { if (mounted.current) setError('No se pudo preparar Whisper. Procesar reintentará. ' + e.message); })
+            .finally(() => { warmPromise.current = null; if (mounted.current) setWarming(false); });
+        }
       }
       const opened = await opening;
       if (!mounted.current) { await opened.cancel(); return; }
@@ -307,11 +317,9 @@ export default function Captura({ visita, onListo, onEstado }) {
                   ))}
                 </div>
               )}
-              {pack && (
+              {(hayEscritorio() || pack) && (
                 <div className="pack-modelos">
-                  {pack.ready ? (
-                    <p className="fila-s">Al grabar se carga Whisper. Qwen entra al procesar, no juntos.</p>
-                  ) : (
+                  {pack && !pack.ready && (
                     <>
                       <button type="button" data-testid="cib-modelos" className="btn btn-sec" onClick={bajarModelos} disabled={bajando}>
                         {bajando ? (progreso || 'Descargando modelos…') : 'Descargar modelos (~4,1 GB)'}
@@ -323,6 +331,7 @@ export default function Captura({ visita, onListo, onEstado }) {
                       )}
                     </>
                   )}
+                  {pack?.ready && <p className="fila-s">Al grabar se carga Whisper. Qwen entra al procesar, no juntos. El encaje de esta máquina está en Configuración.</p>}
                 </div>
               )}
 

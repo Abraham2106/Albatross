@@ -16,6 +16,7 @@
     "start": "node scripts/launch.mjs",
     "smoke": "node scripts/launch.mjs --smoke-test",
     "models": "node --experimental-strip-types --no-warnings src/adapters/inference/qvac/model-pack-cli.ts",
+    "fit": "node --experimental-strip-types --no-warnings scripts/qvac-fit.mjs",
     "test:measurement": "node scripts/measure.mjs --self-check",
     "measure": "node scripts/measure.mjs",
     "test": "node --test scripts/measurement-core.test.mjs && vitest run",

@@ -26,8 +26,11 @@ const api: DesktopApi = {
   } : {}),
   confirmar: input => ipcRenderer.invoke('philips:confirmar', input),
   models: () => ipcRenderer.invoke('philips:models'),
-  downloadModels: requestId => ipcRenderer.invoke('philips:download-models', { requestId }),
+  downloadModels: (requestId, options) => ipcRenderer.invoke('philips:download-models', { requestId, llm: options?.llm }),
   preloadModels: (requestId, capabilities) => ipcRenderer.invoke('philips:preload-models', { requestId, capabilities }),
+  fit: () => ipcRenderer.invoke('philips:fit'),
+  setResidence: mode => ipcRenderer.invoke('philips:set-residence', { mode }),
+  setLlm: llm => ipcRenderer.invoke('philips:set-llm', { llm }),
   onProgress: listener => {
     const handler = (_event: Electron.IpcRendererEvent, value: { requestId: string; message: string }) => listener(value);
     ipcRenderer.on('philips:progress', handler);

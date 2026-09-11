@@ -64,6 +64,19 @@ describe('QVAC adapter without a real runtime or models', () => {
     expect(client.load).not.toHaveBeenCalled();
     await engine.close();
   });
+  it('keeps Whisper and Qwen loaded when residence is hot', async () => {
+    const client = clientMock();
+    const engine = new QvacInferenceEngine({ enabled: true, residence: 'hot', clientFactory: async () => client });
+    expect(await engine.warm(['stt', 'llm'])).toEqual({ stt: true, llm: true });
+    await engine.transcribe({ audio: pcmToWav(new Float32Array(16000), 16000), mimeType: 'audio/wav' });
+    await engine.extractObservations({ hospitalId: 'a', transcript });
+    expect(engine.loaded()).toEqual({ stt: true, llm: true });
+    expect(client.unload).not.toHaveBeenCalled();
+    await engine.setResidence('sequential');
+    expect(engine.loaded()).toEqual({ stt: true, llm: false });
+    expect(client.unload).toHaveBeenCalledWith('llm-model');
+    await engine.close();
+  });
   it('never constructs the SDK when models are disabled', async () => {
     const factory = vi.fn(async () => clientMock());
     const engine = new QvacInferenceEngine({ clientFactory: factory });
@@ -80,6 +93,13 @@ describe('QVAC adapter without a real runtime or models', () => {
     expect(client.load).toHaveBeenCalledTimes(1);
     expect(client.complete.mock.calls[0]?.[2]).toMatchObject({ additionalProperties: false });
     await engine.close(); expect(client.unload).toHaveBeenCalledWith('llm-model'); expect(client.close).toHaveBeenCalled();
+  });
+  it('records 1.7B provenance when that source is selected', async () => {
+    const client = clientMock();
+    const engine = new QvacInferenceEngine({ enabled: true, llmSource: 'QWEN3_1_7B_INST_Q4', clientFactory: async () => client });
+    const output = await engine.extractObservations({ hospitalId: 'a', transcript });
+    expect(output.provenance).toEqual({ execution: 'local', model: 'QWEN3_1_7B_INST_Q4' });
+    await engine.close();
   });
   it('passes raw PCM without WAV headers to SDK transcription', async () => {
     const client = clientMock();

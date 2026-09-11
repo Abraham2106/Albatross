@@ -104,11 +104,11 @@ export const estadoModelos = () => {
   return api?.models ? viaDesktop(() => api.models()) : Promise.resolve(null);
 };
 
-export const descargarModelos = () => {
+export const descargarModelos = (llm) => {
   const api = desktop();
   if (!api?.downloadModels) throw new Error('SIN_BACKEND');
   lastRequestId = crypto.randomUUID();
-  return viaDesktop(() => api.downloadModels(lastRequestId));
+  return viaDesktop(() => api.downloadModels(lastRequestId, llm ? { llm } : undefined));
 };
 
 export const onProgreso = (listener) => desktop()?.onProgress?.(listener) ?? (() => {});
@@ -118,6 +118,23 @@ export const precargarModelos = (capabilities = ['stt']) => {
   if (!api?.preloadModels) return Promise.resolve(null);
   const requestId = crypto.randomUUID();
   return viaDesktop(() => api.preloadModels(requestId, capabilities));
+};
+
+export const estadoFit = () => {
+  const api = desktop();
+  return api?.fit ? viaDesktop(() => api.fit()) : Promise.resolve(null);
+};
+
+export const fijarResidencia = (mode) => {
+  const api = desktop();
+  if (!api?.setResidence) throw new Error('SIN_BACKEND');
+  return viaDesktop(() => api.setResidence(mode));
+};
+
+export const fijarLlm = (llm) => {
+  const api = desktop();
+  if (!api?.setLlm) throw new Error('SIN_BACKEND');
+  return viaDesktop(() => api.setLlm(llm));
 };
 
 export const confirmar = (observacionId, respuestas) => {

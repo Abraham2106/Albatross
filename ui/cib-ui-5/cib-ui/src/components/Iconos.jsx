@@ -60,3 +60,11 @@ export const Lupa = (p) => (
 export const Luna = (p) => (
   <svg {...base} {...p} aria-hidden="true"><path d="M21 14.5A8.5 8.5 0 1 1 9.5 3 7 7 0 0 0 21 14.5z" /></svg>
 );
+
+export const Ajustes = (p) => (
+  <svg {...base} {...p} aria-hidden="true">
+    <path d="M4 8h10M18 8h2M12 16h8M4 16h4" />
+    <circle cx="16" cy="8" r="2.2" />
+    <circle cx="10" cy="16" r="2.2" />
+  </svg>
+);

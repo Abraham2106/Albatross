@@ -135,7 +135,10 @@ function setupHandlers() {
   handle('open-whisper-window', () => openWhisperWindow());
   handle('confirmar', value => runtime!.cib.confirmar(value));
   handle('models', () => runtime!.models());
-  handle('download-models', (value, event) => operation(event, value, (_input, signal) => runtime!.downloadModels(signal)));
+  handle('download-models', (value, event) => operation(event, value, (input, signal) => {
+    const llm = input.llm === '1.7b' || input.llm === '4b' ? input.llm : undefined;
+    return runtime!.downloadModels(signal, llm);
+  }));
   handle('preload-models', async (value, event) => {
     const v = record(value);
     const id = text(v.requestId, 'Solicitud', 100);
@@ -144,6 +147,17 @@ function setupHandlers() {
     preloadSenders.set(id, event.sender);
     try { return await runtime!.warm(capabilities.length ? capabilities : ['stt']); }
     finally { preloadSenders.delete(id); }
+  });
+  handle('fit', () => runtime!.fit());
+  handle('set-residence', value => {
+    const mode = text(record(value).mode, 'Residencia', 16);
+    if (mode !== 'sequential' && mode !== 'hot') invalid('Residencia inválida.');
+    return runtime!.setResidence(mode);
+  });
+  handle('set-llm', value => {
+    const llm = text(record(value).llm, 'Modelo', 8);
+    if (llm !== '4b' && llm !== '1.7b') invalid('Modelo inválido.');
+    return runtime!.setLlm(llm);
   });
 }
 function boundsPath(name = 'window-bounds.json') {

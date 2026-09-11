@@ -4,10 +4,14 @@ import { CibService } from '../application/cib-service';
 import { CaptureService } from '../application/capture-service';
 import { SqliteVisitRepository } from '../adapters/persistence/visit-repository';
 import { QvacInferenceEngine, QvacPlateVisionEngine } from '../adapters/inference/qvac';
-import { downloadAll, inspectModels } from '../adapters/inference/qvac/model-pack';
+import { downloadAll, inspectModels, writeLlmChoice, type LlmVariant } from '../adapters/inference/qvac/model-pack';
+import { probeHardware } from '../adapters/inference/qvac/hardware-probe';
+import { pinNvidiaGpu } from '../adapters/inference/qvac/prefer-nvidia';
+import { evaluateFit } from '../application/qvac-fit';
 import { DeviceRegistry } from '../adapters/peer/device-registry';
 import { ComputerPeerService } from '../adapters/peer/computer-peer';
-import type { OperationOptions } from '../application/ports/inference-engine';
+import { InferenceError, type OperationOptions } from '../application/ports/inference-engine';
+import type { ResidenceMode } from '../application/ports/qvac-fit';
 import type { RuntimeStatus } from '../application/desktop-api';
 
 function statusMessage(enabled: boolean, loaded?: { stt: boolean; llm: boolean }) {
@@ -42,12 +46,34 @@ export function createRuntime(filename: string, env: Record<string, string | und
       refreshStatus();
       return loaded;
     },
-    async downloadModels(signal?: AbortSignal) {
-      const pack = await downloadAll({ onProgress, signal });
+    async downloadModels(signal?: AbortSignal, llm?: LlmVariant) {
+      const pack = await downloadAll({ onProgress, signal, llm });
       engine.enable();
       status.modelsEnabled = true;
+      await engine.dropLoaded('llm');
       refreshStatus();
       return { ...pack, loaded: engine.loaded() };
+    },
+    async setLlm(llm: LlmVariant) {
+      const pack = inspectModels();
+      const wanted = pack.items.find(item => item.name === (llm === '1.7b' ? 'QWEN3_1_7B_INST_Q4' : 'QWEN3_4B_INST_Q4_K_M'));
+      if (!wanted?.ready) throw new InferenceError('UNAVAILABLE', 'Descarga ese modelo antes de activarlo.');
+      writeLlmChoice(llm);
+      await engine.dropLoaded('llm');
+      refreshStatus();
+      return { ...inspectModels(), loaded: engine.loaded() };
+    },
+    fit() {
+      return { ...evaluateFit(probeHardware({ pin: pinNvidiaGpu }), { llm: inspectModels().llm }), residence: engine.residence(), loaded: engine.loaded() };
+    },
+    async setResidence(mode: ResidenceMode) {
+      if (mode === 'hot') {
+        const hot = evaluateFit(probeHardware({ pin: pinNvidiaGpu }), { llm: inspectModels().llm }).policies.find(item => item.id === 'hot_stt_llm');
+        if (!hot?.allowed) throw new InferenceError('INVALID_INPUT', hot?.reason || 'Esta GPU no sostiene Whisper y Qwen juntos.');
+      }
+      await engine.setResidence(mode);
+      refreshStatus();
+      return { ...evaluateFit(probeHardware({ pin: pinNvidiaGpu }), { llm: inspectModels().llm }), residence: engine.residence(), loaded: engine.loaded() };
     },
     async close() { try { await engine.close?.(); } finally { repository.close(); } },
   };

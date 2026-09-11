@@ -1,0 +1,126 @@
+{
+  "at": "2026-09-11T10:23:00.842Z",
+  "sdk": "0.18.2",
+  "hardware": {
+    "cpuName": "AMD Ryzen 5 7535HS with Radeon Graphics",
+    "cpuCores": 12,
+    "ramBytes": 16329850880,
+    "ramUsedBytes": 15463014400,
+    "gpuName": "NVIDIA GeForce RTX 2050",
+    "gpuVendor": "nvidia",
+    "vramBytes": 4294967296,
+    "vramStatus": "supported",
+    "vramSource": "nvidia-smi",
+    "backend": "gpu",
+    "pinnedGpu": "NVIDIA GeForce RTX 2050"
+  },
+  "fit": {
+    "system": {
+      "cpu": "AMD Ryzen 5 7535HS with Radeon Graphics",
+      "cpuCores": 12,
+      "ramBytes": 16329850880,
+      "ramUsedBytes": 15463014400,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 2050",
+        "vramBytes": 4294967296,
+        "vramStatus": "supported",
+        "vramSource": "nvidia-smi"
+      },
+      "backend": "gpu",
+      "pinnedGpu": "NVIDIA GeForce RTX 2050"
+    },
+    "roles": [
+      {
+        "role": "stt",
+        "model": "WHISPER_LARGE_V3_TURBO",
+        "quant": "F16",
+        "label": "Voz",
+        "vramBytes": 2147483648,
+        "ramBytes": 2362232013,
+        "fit": "perfect",
+        "runMode": "gpu"
+      },
+      {
+        "role": "llm",
+        "model": "QWEN3_4B_INST_Q4_K_M",
+        "quant": "Q4_K_M",
+        "label": "Extracción",
+        "vramBytes": 3221225472,
+        "ramBytes": 3435973837,
+        "fit": "good",
+        "runMode": "gpu"
+      },
+      {
+        "role": "vision",
+        "model": "VISIONPSY_NANO_460M_MULTIMODAL_Q4_K_M",
+        "quant": "Q4_K_M",
+        "label": "Placa",
+        "vramBytes": 1181116006,
+        "ramBytes": 2684354560,
+        "fit": "perfect",
+        "runMode": "gpu"
+      }
+    ],
+    "llm": "4b",
+    "recommendedLlm": "4b",
+    "llmChoices": [
+      {
+        "variant": "4b",
+        "model": "QWEN3_4B_INST_Q4_K_M",
+        "quant": "Q4_K_M",
+        "label": "Qwen3 4B",
+        "vramBytes": 3221225472,
+        "ramBytes": 3435973837,
+        "fit": "good"
+      },
+      {
+        "variant": "1.7b",
+        "model": "QWEN3_1_7B_INST_Q4",
+        "quant": "Q4_0",
+        "label": "Qwen3 1.7B",
+        "vramBytes": 1288490189,
+        "ramBytes": 1717986918,
+        "fit": "perfect"
+      }
+    ],
+    "policies": [
+      {
+        "id": "sequential_local",
+        "label": "Uno a la vez",
+        "fit": "good",
+        "allowed": true,
+        "reason": "Un modelo nativo a la vez.",
+        "vramUtil": 0.75,
+        "ramUtil": 0.47342386588897006
+      },
+      {
+        "id": "hot_stt_llm",
+        "label": "Whisper y Qwen en caliente",
+        "fit": "tooTight",
+        "allowed": false,
+        "reason": "Esta GPU no sostiene esos modelos juntos.",
+        "vramUtil": 1.25,
+        "ramUtil": 0.6180811582524384
+      },
+      {
+        "id": "hot_all",
+        "label": "Todo en caliente",
+        "fit": "tooTight",
+        "allowed": false,
+        "reason": "Esta GPU no sostiene esos modelos juntos.",
+        "vramUtil": 1.5249999999068677,
+        "ramUtil": 0.7824644450151893
+      },
+      {
+        "id": "vision_delegated",
+        "label": "Placa en el otro proceso",
+        "fit": "good",
+        "allowed": true,
+        "reason": "La placa corre en el otro proceso; aquí Whisper y Qwen siguen en cola.",
+        "vramUtil": 0.75,
+        "ramUtil": 0.47342386588897006
+      }
+    ],
+    "recommendation": "vision_delegated"
+  }
+}

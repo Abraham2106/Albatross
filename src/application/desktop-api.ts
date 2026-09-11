@@ -3,12 +3,14 @@ import type { NetworkAuditReport } from './network-audit';
 import type { CibService } from './cib-service';
 import type { InferenceErrorCode, QueryFilter, TranscriptionRequest } from './ports/inference-engine';
 import type { WhisperSpeedResult } from './whisper-metrics';
+import type { QvacFitReport, ResidenceMode, LlmVariant } from './ports/qvac-fit';
 export type Result<T> = { ok: true; data: T } | { ok: false; error: { code: InferenceErrorCode; message: string } };
 export interface RuntimeStatus { mode: 'qvac'; modelsEnabled: boolean; message: string }
 export interface ModelPackStatus {
   ready: boolean;
   totalBytes: number;
-  items: readonly { name: string; label: string; file: string; ready: boolean; bytes: number; expected: number }[];
+  llm: LlmVariant;
+  items: readonly { name: string; label: string; file: string; ready: boolean; bytes: number; expected: number; optional?: boolean }[];
   loaded?: { stt: boolean; llm: boolean };
 }
 export interface OpenWavResult {
@@ -41,7 +43,10 @@ export interface DesktopApi {
   openWhisperWindow?(): Promise<Result<void>>;
   confirmar(input: { observacionId: string; respuestas: Record<string, 'si' | 'no' | 'nose'> }): Promise<Result<ReturnType<CibService['confirmar']>>>;
   models(): Promise<Result<ModelPackStatus>>;
-  downloadModels(requestId: string): Promise<Result<ModelPackStatus>>;
+  downloadModels(requestId: string, options?: { llm?: LlmVariant }): Promise<Result<ModelPackStatus>>;
   preloadModels(requestId: string, capabilities?: Array<'stt' | 'llm'>): Promise<Result<{ stt: boolean; llm: boolean }>>;
+  fit(): Promise<Result<QvacFitReport>>;
+  setResidence(mode: ResidenceMode): Promise<Result<QvacFitReport>>;
+  setLlm(llm: LlmVariant): Promise<Result<ModelPackStatus>>;
 }
 declare global { interface Window { philips?: DesktopApi } }

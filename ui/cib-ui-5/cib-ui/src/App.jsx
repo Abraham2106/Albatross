@@ -5,7 +5,8 @@ import Captura from './screens/Captura.jsx';
 import ResumenPantalla from './screens/Resumen.jsx';
 import Mapa from './screens/Mapa.jsx';
 import Consultar from './screens/Consultar.jsx';
-import { Lista, Micro, Grafico, Globo, Sol, Luna, Lupa } from './components/Iconos.jsx';
+import { Lista, Micro, Grafico, Globo, Sol, Luna, Lupa, Ajustes } from './components/Iconos.jsx';
+import Configuracion from './screens/Configuracion.jsx';
 
 const SECCIONES = [
   { id: 'clientes', testid: 'cib-nav-hospitales', etq: 'Hospitales', Icono: Lista },
@@ -13,6 +14,7 @@ const SECCIONES = [
   { id: 'consulta', testid: 'cib-nav-consulta', etq: 'Consultar', Icono: Lupa },
   { id: 'mapa', testid: undefined, etq: 'Cobertura', Icono: Globo },
   { id: 'resumen', testid: undefined, etq: 'Panorama', Icono: Grafico },
+  { id: 'config', testid: 'cib-nav-config', etq: 'Configuración', Icono: Ajustes },
 ];
 
 const TEMA_KEY = 'philips-tema';
@@ -174,6 +176,10 @@ export default function App() {
 
           <div className={'vista' + (tab === 'resumen' && !clienteId ? ' vista-on' : '')}>
             <ResumenPantalla key={version} onAbrirCliente={(id) => abrirCliente(id, 'resumen')} />
+          </div>
+
+          <div className={'vista' + (tab === 'config' ? ' vista-on' : '')}>
+            <Configuracion activa={tab === 'config'} tema={tema} onTema={setTema} onEstado={setEstado} />
           </div>
 
           {fichaAparte && (

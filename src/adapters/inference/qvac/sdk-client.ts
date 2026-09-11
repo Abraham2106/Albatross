@@ -2,7 +2,7 @@ import { existsSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { LLM_FILE, STT_FILE } from './model-pack';
+import { STT_FILE, activeLlm } from './model-pack';
 import { llamaDedicatedGpuConfig, pinNvidiaGpu } from './prefer-nvidia';
 import { pcm16ToWav } from '../../../application/audio';
 
@@ -51,7 +51,7 @@ export async function createSdkClient(onProgress: (message: string) => void, onC
       const onDownload = (p: { percentage?: number }) => onProgress('Preparando modelo ' + capability + (p.percentage === undefined ? '' : ': ' + Math.round(p.percentage) + '%'));
       // Ruta local y descriptor del registro son sobrecargas distintas de loadModel:
       // un modelType condicional en un solo objeto impide resolverlas.
-      const pending = capability === 'stt' ? loadStt(source ?? localWeight(STT_FILE)) : loadLlm(source ?? localWeight(LLM_FILE));
+      const pending = capability === 'stt' ? loadStt(source ?? localWeight(STT_FILE)) : loadLlm(source ?? activeLlm().path);
       return { requestId: pending.requestId, final: pending };
 
       function loadStt(path?: string) {
@@ -70,9 +70,13 @@ export async function createSdkClient(onProgress: (message: string) => void, onC
           ...(options.gpuLayers === 0 ? {} : llamaDedicatedGpuConfig()),
           ...(options.gpuLayers === undefined ? {} : { gpu_layers: options.gpuLayers }),
         };
-        return path
-          ? sdk.loadModel({ modelSrc: path, modelType: 'llamacpp-completion', modelConfig, onProgress: onDownload })
-          : sdk.loadModel({ modelSrc: sdk.QWEN3_4B_INST_Q4_K_M, modelConfig, onProgress: onDownload });
+        if (path) {
+          return sdk.loadModel({ modelSrc: path, modelType: 'llamacpp-completion', modelConfig, onProgress: onDownload });
+        }
+        if (activeLlm().variant === '1.7b') {
+          return sdk.loadModel({ modelSrc: sdk.QWEN3_1_7B_INST_Q4, modelConfig, onProgress: onDownload });
+        }
+        return sdk.loadModel({ modelSrc: sdk.QWEN3_4B_INST_Q4_K_M, modelConfig, onProgress: onDownload });
       }
     },
     transcribe(modelId, pcm) {
